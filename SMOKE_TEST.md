@@ -25,11 +25,11 @@ python3 tools/build_public.py --check     # publish anonymity gate
 ## B. Commands appear and trigger
 
 5. Type `/` and confirm these commands are offered:
-   - [ ] `/reproai-check`
-   - [ ] `/reproai-comply`
-   - [ ] `/reproai-fix`
-   - [ ] `/reproai-update`
-6. Run `/reproai-check` on a small replication package (e.g. a copy of one IV paper's
+   - [ ] `/reproai:check`
+   - [ ] `/reproai:comply`
+   - [ ] `/reproai:fix`
+   - [ ] `/reproai:update`
+6. Run `/reproai:check` on a small replication package (e.g. a copy of one IV paper's
    `replication_files/`).
    - [ ] It runs `reproai check` (or the bundled `python -m line1_core.cli`) and reports a
          priority-graded advisory (P0–P4) + venue compliance + risk register.
@@ -38,19 +38,19 @@ python3 tools/build_public.py --check     # publish anonymity gate
 
 ## C. Fix command (dry-run + apply)
 
-7. Run `/reproai-fix` (dry-run) on the same package.
+7. Run `/reproai:fix` (dry-run) on the same package.
    - [ ] Shows a unified diff of only auto-safe edits (B9/B11), or "No auto-safe fixes available".
-8. Run `/reproai-fix ... --apply --out <copy>`.
+8. Run `/reproai:fix ... --apply --out <copy>`.
    - [ ] Writes a fixed copy; the original is byte-for-byte unchanged.
 
 ## D. Update path
 
 9. `/plugin marketplace update <org>/reproai` then `/plugin update reproai`.
-   - [ ] After `/reload-plugins`, `/reproai-check` reports the new `rules` version.
+   - [ ] After `/reload-plugins`, `/reproai:check` reports the new `rules` version.
 
 ## E. Codex parity (if shipping the Codex runtime)
 
-10. Install per the Codex runtime instructions; repeat B6 and confirm `/reproai-check` runs.
+10. Install per the Codex runtime instructions; repeat B6 and confirm `/reproai:check` runs.
 
 ## Sign-off
 
