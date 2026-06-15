@@ -124,7 +124,7 @@ body {
 .btn.ghost { color: var(--ink); border: 1px solid var(--line); background: var(--paper); }
 .btn.ghost:hover { border-color: var(--ink-soft); background: var(--paper-2); }
 .hero-meta { margin-top: 28px; color: var(--ink-faint); font-size: 14px; display: flex; align-items: center; gap: 9px; }
-.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--red); display: inline-block; box-shadow: 0 0 0 3px rgba(200,32,47,0.12); }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: #9aa7b5; display: inline-block; }
 
 /* engine panel */
 .engine {
@@ -146,10 +146,7 @@ body {
   display: flex; align-items: center; gap: 12px; background: var(--paper-2);
 }
 .lights { display: flex; gap: 6px; }
-.lights .l { width: 10px; height: 10px; border-radius: 50%; }
-.lights .r { background: #ec6a5e; }
-.lights .y { background: #f4bf4f; }
-.lights .g { background: #61c554; }
+.lights .l { width: 9px; height: 9px; border-radius: 50%; background: #cfd8e3; }
 .engine-title { letter-spacing: 0.04em; text-transform: uppercase; }
 
 .engine-body { position: relative; z-index: 1; padding: 18px; display: flex; flex-direction: column; gap: 14px; }
