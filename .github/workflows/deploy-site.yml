@@ -28,8 +28,6 @@ jobs:
           node-version: 20
       - run: npm install
       - run: npm run build
-      - name: Add CNAME
-        run: echo "reproai.org" > dist/CNAME
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site/dist
