@@ -92,15 +92,15 @@ function Hero() {
   return (
     <header id="overview" className="hero section">
       <div className="hero-left">
-        <div className="eyebrow">Author-facing replication-package helper</div>
+        <div className="eyebrow">Author-facing plugin for replication packages</div>
         <h1>
-          A replication package<br />others can <span className="red">REPRODUCE</span>.
+          Build a package<br />others can <span className="red">REPRODUCE</span>.
         </h1>
         <p className="lede">
-          ReproAI helps you prepare a cleaner, more readable, less complex replication package
-          before you submit — so anyone can reproduce your results with less friction. It does this
-          by pre-diagnosing your package (entry points, structure, environment, venue compliance) and
-          applying only safe fixes. It never runs your code and never judges your results.
+          ReproAI is a plugin that helps authors construct a cleaner, more readable replication
+          package before submission — so a journal&apos;s data editor or associate editor can reproduce
+          the results with far less friction. It pre-diagnoses your package and applies only safe
+          fixes; it never runs your code and never judges your results.
         </p>
         <div className="cta">
           <a className="btn primary" href={GH}>View on GitHub</a>
@@ -177,18 +177,18 @@ function Install() {
   ];
   return (
     <section id="install" className="section">
-      <SectionHead lead="Install" emphasis="ReproAI" sub="It ships as a plugin. Add the marketplace, install, and run it in your package project." />
+      <SectionHead lead="Install" emphasis="ReproAI" sub="ReproAI ships as a plugin. Add the marketplace, install it, and run it inside your replication package." />
       <div className="cards two">
         <div className="card">
           <span className="redline" />
           <h3>Install as a plugin</h3>
-          <p>Activate ReproAI in your package project. Use <code>--scope project</code> to keep it scoped to this package.</p>
+          <p>Activate ReproAI inside your replication package. Use <code>--scope project</code> to keep the plugin scoped to this package.</p>
           <Term lines={installLines} />
         </div>
         <div className="card">
           <span className="redline" />
           <h3>Run the pre-diagnose</h3>
-          <p>Point it at your package. It tells you what to clean up to make the package easier to reproduce — a priority-graded advisory, a venue-compliance report, and a risk register — and applies only safe fixes to a copy.</p>
+          <p>Point ReproAI at your package and it tells you exactly what to clean up so a data editor can reproduce it on the first try — a priority-graded advisory, a venue-compliance report, and a risk register — applying only safe fixes to a copy.</p>
           <Term lines={runLines} />
         </div>
       </div>
@@ -230,7 +230,7 @@ function Examples() {
   ];
   return (
     <section id="examples" className="section">
-      <SectionHead lead="What it helps you" emphasis="fix" sub="Recurring, author-preventable patterns that make a package harder to reproduce — distilled from a large body of replication work, graded P0–P4 by how much each one costs a downstream run." />
+      <SectionHead lead="What ReproAI helps you" emphasis="fix" sub="Recurring, author-preventable patterns that make a package harder for a data editor to reproduce — distilled from a large body of replication work, graded P0–P4 by how much each one costs a downstream run." />
       <div className="cards four">
         {items.map((it) => (
           <div className="card" key={it.title}>
@@ -263,7 +263,7 @@ function FAQ() {
     },
     {
       q: "Will fixing everything guarantee a first-try pass?",
-      a: "No — and ReproAI says so. Pre-diagnose maximizes the probability of a first-try pass by removing known, avoidable failures. Numerical match, full environment reconstruction, and runtime behavior only surface at execution, so a guarantee isn't honest.",
+      a: "No — and ReproAI says so. The plugin maximizes the probability of a first-try pass by removing known, avoidable failures before a data editor ever runs the package. Numerical match, full environment reconstruction, and runtime behavior only surface at execution, so a guarantee wouldn't be honest.",
     },
     {
       q: "Does it auto-fix my files?",
@@ -351,7 +351,7 @@ function Footer() {
           <a href={GH}>GitHub</a>
           <a href="#cite">Cite</a>
         </div>
-        <div className="footer-note">Reproducibility, settled before submission.</div>
+        <div className="footer-note">The plugin authors run before submission.</div>
       </div>
     </footer>
   );
