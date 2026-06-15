@@ -92,15 +92,15 @@ function Hero() {
   return (
     <header id="overview" className="hero section">
       <div className="hero-left">
-        <div className="eyebrow">Author-facing replication pre-diagnose</div>
+        <div className="eyebrow">Author-facing replication-package helper</div>
         <h1>
-          Reproducible <span className="red">SCIENCE</span>,<br />before <span className="red">SUBMISSION</span>.
+          A replication package<br />others can <span className="red">REPRODUCE</span>.
         </h1>
         <p className="lede">
-          ReproAI runs on your own paper before you submit. It audits and reorganizes your
-          replication package — entry points, structure, environment, venue compliance — so a
-          downstream reproducibility check passes on the first try. It never runs your code and
-          never judges the correctness of your results.
+          ReproAI helps you prepare a cleaner, more readable, less complex replication package
+          before you submit — so anyone can reproduce your results with less friction. It does this
+          by pre-diagnosing your package (entry points, structure, environment, venue compliance) and
+          applying only safe fixes. It never runs your code and never judges your results.
         </p>
         <div className="cta">
           <a className="btn primary" href={GH}>View on GitHub</a>
@@ -138,6 +138,25 @@ const FLAG = (t) => ({ t, c: "flag" });
 const OUT = (t) => ({ t, c: "out" });
 const TXT = (t) => ({ t });
 
+function Bib({ lines }) {
+  return (
+    <div className="term">
+      {lines.map((line, i) => (
+        <div className="term-line" key={i}>
+          {line.length === 0 ? "\u00a0" : line.map((tok, j) => (
+            <span key={j} className={`tk ${tok.c || ""}`}>{tok.t}</span>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+const AT = (t) => ({ t, c: "bib-at" });
+const KEY = (t) => ({ t, c: "bib-key" });
+const FLD = (t) => ({ t, c: "bib-field" });
+const VAL = (t) => ({ t, c: "bib-val" });
+const PUN = (t) => ({ t, c: "bib-pun" });
+
 function Install() {
   const installLines = [
     [P("$ "), CMD("cd"), TXT(" ~/my-replication-package")],
@@ -169,7 +188,7 @@ function Install() {
         <div className="card">
           <span className="redline" />
           <h3>Run the pre-diagnose</h3>
-          <p>Point it at your package. It writes a priority-graded advisory, a venue-compliance report, and a risk register — and applies only safe fixes to a copy.</p>
+          <p>Point it at your package. It tells you what to clean up to make the package easier to reproduce — a priority-graded advisory, a venue-compliance report, and a risk register — and applies only safe fixes to a copy.</p>
           <Term lines={runLines} />
         </div>
       </div>
@@ -211,7 +230,7 @@ function Examples() {
   ];
   return (
     <section id="examples" className="section">
-      <SectionHead lead="What it" emphasis="catches" sub="Recurring, author-preventable patterns distilled from a large body of replication work — graded P0–P4 by how much they cost a downstream run." />
+      <SectionHead lead="What it helps you" emphasis="fix" sub="Recurring, author-preventable patterns that make a package harder to reproduce — distilled from a large body of replication work, graded P0–P4 by how much each one costs a downstream run." />
       <div className="cards four">
         {items.map((it) => (
           <div className="card" key={it.title}>
@@ -281,6 +300,14 @@ function Cite() {
   year    = {2026},
   note    = {https://github.com/leoyyang/reproai}
 }`;
+  const bibLines = [
+    [AT("@article"), PUN("{"), KEY("reproai2026"), PUN(",")],
+    [TXT("  "), FLD("title"), TXT("   "), PUN("= {"), VAL("ReproAI: Author-Facing Pre-Diagnose for Replication Packages"), PUN("},")],
+    [TXT("  "), FLD("author"), TXT("  "), PUN("= {"), VAL("ReproAI"), PUN("},")],
+    [TXT("  "), FLD("year"), TXT("    "), PUN("= {"), VAL("2026"), PUN("},")],
+    [TXT("  "), FLD("note"), TXT("    "), PUN("= {"), VAL("https://github.com/leoyyang/reproai"), PUN("}")],
+    [PUN("}")],
+  ];
   const [copied, setCopied] = useState(false);
   const copy = () => {
     navigator.clipboard?.writeText(bib).then(() => {
@@ -305,7 +332,7 @@ function Cite() {
             <div className="cite-label">BibTeX</div>
             <button className="copy" onClick={copy}>{copied ? "Copied" : "Copy"}</button>
           </div>
-          <pre className="bib">{bib}</pre>
+          <Bib lines={bibLines} />
         </div>
       </div>
     </section>
