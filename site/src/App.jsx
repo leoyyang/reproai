@@ -25,7 +25,6 @@ const STAGES = [
   { name: "/reproai-comply", note: "Venue compliance checklist (AEA, APSR, AJPS, JOP…)" },
   { name: "/reproai-fix", note: "Rewrites the recommended fixes to a copy, re-checks" },
   { name: "/reproai-debug", note: "Smoke-tests the copy — does it run? tables + figures emitted?", runs: true },
-  { name: "/reproai-update", note: "Knowledge-base version & how to update the rule set" },
 ];
 
 function EnginePanel() {
@@ -54,7 +53,7 @@ function EnginePanel() {
 
       <div className="engine-head">
         <div className="lights"><i className="l r" /><i className="l y" /><i className="l g" /></div>
-        <span className="engine-title">ReproAI · five plugin commands</span>
+        <span className="engine-title">ReproAI · the per-package workflow</span>
       </div>
 
       <motion.div className="engine-body" variants={container}>
@@ -86,6 +85,14 @@ function EnginePanel() {
             <li><span className="pill p1">P1</span> Declare the software version</li>
             <li><span className="pill p3">P3</span> Group commands by the table they build</li>
           </ul>
+        </motion.div>
+
+        <motion.div className="engine-evolve" variants={item}>
+          <span className="evolve-dot" aria-hidden="true" />
+          <div className="evolve-text">
+            <code className="stage-cmd">/reproai-update</code>
+            <span className="evolve-note">Outside the per-package flow — the rule set keeps evolving as more packages are seen.</span>
+          </div>
         </motion.div>
       </motion.div>
     </motion.div>
