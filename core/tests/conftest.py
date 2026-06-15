@@ -40,8 +40,8 @@ _CLEAN_FILES = {
         use data/panel.dta, clear
         xtset id year
         merge 1:1 id using data/other.dta
-        reg y x1 x2, cluster(id)
-        esttab using "Table1.csv", replace
+        eststo m1: reg y x1 x2, cluster(id)
+        esttab m1 using "output/tables/Table1.csv", replace
         """
     ),
     "analysis.R": '# --> Table 1\nlibrary(fixest)\nm <- feols(y ~ x, data = df)\netable(m, file = "output/tables/table1.tex")\n',

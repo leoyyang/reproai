@@ -64,3 +64,30 @@ def test_verify_passes_when_output_file_present_and_fresh(tmp_path: Path) -> Non
     vcode, vreport = gate.verify_runtime(pkg, since_epoch=start)
     assert vcode == 0 and vreport["passed"]
     assert vreport["produced"] == 1
+
+
+def test_d1_and_gate_agree_on_count(tmp_path: Path) -> None:
+    from line1_core import coordinator
+    pkg = tmp_path / "p"; pkg.mkdir()
+    # a figure section whose export goes to a NON-canonical path: both D1 and gate must flag it
+    (pkg / "a.do").write_text(
+        "* Table 1\nreg y x\nesttab using \"output/tables/t1.csv\", replace\n"
+        "* Figure 1\ntwoway scatter y x\ngraph save a, replace\n",
+        encoding="utf-8",
+    )
+    r = coordinator.check(pkg, None)
+    d1 = [it for it in r["advisory_plan"]["items"] if it["rule_id"] == "D1-output-artifact-coverage"]
+    d1_count = len(d1[0]["evidence"]) if d1 else 0
+    _, rep = gate.gate_static(pkg)
+    # gate expected total = sections; D1 evidence = sections lacking a canonical export.
+    # Figure 1 (graph save a -> non-canonical) must be flagged by BOTH; Table 1 by neither.
+    assert d1_count == 1, d1_count
+    assert rep["with_export"] == 1 and len(rep["missing_export"]) == 1
+
+
+def test_gate_counts_unlabeled_artifacts(tmp_path: Path) -> None:
+    pkg = tmp_path / "p"; pkg.mkdir()
+    # no `* Table/Figure N` headers, but the script builds a table and a figure
+    (pkg / "a.do").write_text("use d.dta\nreg y x\ntwoway scatter y x\n", encoding="utf-8")
+    _, rep = gate.gate_static(pkg)
+    assert rep["expected_total"] == 2, rep  # 1 unlabeled table + 1 unlabeled figure

@@ -19,6 +19,7 @@ from . import inventory
 from .rule_engine import (
     _TABLE_HEADER, _FIGURE_HEADER, _section_spans, _is_estimation, _GRAPH_CMD,
     _TABLE_EXPORT, _GRAPH_EXPORT, _mask_r_strings_comments,
+    _toplevel_estimation_lines, _toplevel_graph_line,
 )
 
 # A VALID export must write under the canonical output dir for its kind. This is what stops the
@@ -58,19 +59,34 @@ def expected_artifacts(root: Path) -> list[Artifact]:
         text = (root / e.path).read_text(encoding="utf-8", errors="replace")
         lines = text.splitlines()
 
-        for label, start, end in _section_spans(lines, _TABLE_HEADER):
-            body = lines[start:end]
-            if not any(_is_estimation(ln) for ln in body):
-                continue
-            tgts = _section_export_targets(body, _OUT_TABLE, _TABLE_EXPORT)
-            out.append(Artifact(label, "table", e.path, start + 1, bool(tgts), tgts))
+        table_spans = _section_spans(lines, _TABLE_HEADER)
+        if table_spans:
+            for label, start, end in table_spans:
+                body = lines[start:end]
+                if not any(_is_estimation(ln) for ln in body):
+                    continue
+                tgts = _section_export_targets(body, _OUT_TABLE, _TABLE_EXPORT)
+                out.append(Artifact(label, "table", e.path, start + 1, bool(tgts), tgts))
+        else:
+            # no `* Table N` headers: an unlabeled script that builds a table is still one artifact
+            tl = _toplevel_estimation_lines(text)
+            if tl:
+                tgts = _section_export_targets(lines, _OUT_TABLE, _TABLE_EXPORT)
+                out.append(Artifact("Table (unlabeled)", "table", e.path, tl[0], bool(tgts), tgts))
 
-        for label, start, end in _section_spans(lines, _FIGURE_HEADER):
-            body = lines[start:end]
-            if not any(_GRAPH_CMD.search(ln) for ln in body):
-                continue
-            tgts = _section_export_targets(body, _OUT_FIGURE, _GRAPH_EXPORT)
-            out.append(Artifact(label, "figure", e.path, start + 1, bool(tgts), tgts))
+        figure_spans = _section_spans(lines, _FIGURE_HEADER)
+        if figure_spans:
+            for label, start, end in figure_spans:
+                body = lines[start:end]
+                if not any(_GRAPH_CMD.search(ln) for ln in body):
+                    continue
+                tgts = _section_export_targets(body, _OUT_FIGURE, _GRAPH_EXPORT)
+                out.append(Artifact(label, "figure", e.path, start + 1, bool(tgts), tgts))
+        else:
+            gl = _toplevel_graph_line(text)
+            if gl is not None:
+                tgts = _section_export_targets(lines, _OUT_FIGURE, _GRAPH_EXPORT)
+                out.append(Artifact("Figure (unlabeled)", "figure", e.path, gl, bool(tgts), tgts))
     return out
 
 

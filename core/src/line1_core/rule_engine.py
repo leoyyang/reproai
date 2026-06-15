@@ -455,6 +455,20 @@ def _has_toplevel_estimation(text: str) -> bool:
     return len(_toplevel_estimation_lines(text)) > 0
 
 
+# A table/figure export only counts for D1 if it writes under the canonical output dir — same rule
+# as `reproai gate`, so `reproai check` (D1) and the gate agree on what is "exported".
+_OUT_TABLE_PATH = re.compile(r'output[\\/]tables[\\/]', re.IGNORECASE)
+_OUT_FIGURE_PATH = re.compile(r'output[\\/]figures[\\/]', re.IGNORECASE)
+
+
+def _has_canonical_export(body: list[str], cmd_re: re.Pattern[str], out_re: re.Pattern[str]) -> bool:
+    for ln in body:
+        masked = _mask_r_strings_comments(ln)
+        if cmd_re.search(masked) and out_re.search(ln):
+            return True
+    return False
+
+
 def _toplevel_graph_line(text: str) -> int | None:
     brace_depth = 0
     for i, line in enumerate(text.splitlines(), start=1):
@@ -486,12 +500,12 @@ def _detect_uncaptured_artifacts(path: str, text: str) -> list[dict[str, Any]]:
         for label, start, end in table_spans:
             body = lines[start:end]
             has_est = any(_is_estimation(ln) for ln in body)
-            has_exp = any(_TABLE_EXPORT.search(_mask_r_strings_comments(ln)) for ln in body)
+            has_exp = _has_canonical_export(body, _TABLE_EXPORT, _OUT_TABLE_PATH)
             if has_est and not has_exp:
                 hits.append(_ev(path, start + 1, f"{label}: estimations build this table but no export saves it to output/tables/"))
     else:
         toplevel = _toplevel_estimation_lines(text)
-        has_exp = any(_TABLE_EXPORT.search(_mask_r_strings_comments(ln)) for ln in lines)
+        has_exp = _has_canonical_export(lines, _TABLE_EXPORT, _OUT_TABLE_PATH)
         if toplevel and not has_exp:
             hits.append(_ev(path, toplevel[0], "estimations build a table but no export saves coefficients to output/tables/"))
 
@@ -500,12 +514,12 @@ def _detect_uncaptured_artifacts(path: str, text: str) -> list[dict[str, Any]]:
         for label, start, end in figure_spans:
             body = lines[start:end]
             has_graph = any(_GRAPH_CMD.search(ln) for ln in body)
-            has_exp = any(_GRAPH_EXPORT.search(ln) for ln in body)
+            has_exp = _has_canonical_export(body, _GRAPH_EXPORT, _OUT_FIGURE_PATH)
             if has_graph and not has_exp:
                 hits.append(_ev(path, start + 1, f"{label}: figure produced but no graph-export saves it to output/figures/"))
     else:
         gline = _toplevel_graph_line(text)
-        has_exp = any(_GRAPH_EXPORT.search(ln) for ln in lines)
+        has_exp = _has_canonical_export(lines, _GRAPH_EXPORT, _OUT_FIGURE_PATH)
         if gline is not None and not has_exp:
             hits.append(_ev(path, gline, "figure produced but no graph-export saves it to output/figures/"))
     return hits
