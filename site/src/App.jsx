@@ -21,11 +21,11 @@ function Nav() {
 }
 
 const STAGES = [
-  { name: "Architect", note: "Recovers the workflow, maps tables, flags orphans" },
-  { name: "Provisioner", note: "Pins the environment, vendors dependencies" },
-  { name: "Complier", note: "Checks the target-venue standard" },
-  { name: "Adversarial Reviewer", note: "Cross-checks the two lines (deterministic)" },
-  { name: "Distiller", note: "Proposes reusable rules (with your consent)" },
+  { name: "/reproai-check", note: "Static pre-diagnose — scans, applies rules + venue, writes the advisory" },
+  { name: "/reproai-comply", note: "Venue compliance checklist (AEA, APSR, AJPS, JOP…)" },
+  { name: "/reproai-fix", note: "Rewrites the recommended fixes to a copy, re-checks" },
+  { name: "/reproai-debug", note: "Smoke-tests the copy — does it run? tables + figures emitted?", runs: true },
+  { name: "/reproai-update", note: "Knowledge-base version & how to update the rule set" },
 ];
 
 function EnginePanel() {
@@ -54,7 +54,7 @@ function EnginePanel() {
 
       <div className="engine-head">
         <div className="lights"><i className="l r" /><i className="l y" /><i className="l g" /></div>
-        <span className="engine-title">ReproAI · 5-agent static pre-diagnose</span>
+        <span className="engine-title">ReproAI · five plugin commands</span>
       </div>
 
       <motion.div className="engine-body" variants={container}>
@@ -68,7 +68,10 @@ function EnginePanel() {
             <div className={`stage ${active === i ? "on" : ""}`} key={s.name}>
               <span className="stage-tick" />
               <div className="stage-text">
-                <div className="stage-name">{s.name}</div>
+                <div className="stage-name">
+                  <code className="stage-cmd">{s.name}</code>
+                  {s.runs && <span className="stage-tag">runs code</span>}
+                </div>
                 <div className="stage-note">{s.note}</div>
               </div>
               {active === i && <span className="stage-run">working…</span>}
@@ -100,8 +103,8 @@ function Hero() {
         <p className="lede">
           ReproAI is a plugin that helps authors construct a cleaner, more readable replication
           package before submission — so a journal&apos;s data editor or associate editor can reproduce
-          the results with far less friction. A 5-agent static team pre-diagnoses your package and
-          rewrites a copy; an optional smoke test then confirms the copy actually runs. It never
+          the results with far less friction. Its static commands pre-diagnose your package and
+          rewrite a copy; an optional smoke test then confirms the copy actually runs. It never
           judges whether your results are correct — that stays your science.
         </p>
         <div className="cta">
@@ -212,7 +215,7 @@ function Examples() {
   const items = [
     {
       title: "Wrong dataset loads silently",
-      flow: ["Architect reads the load logic", "Finds a guarded fallback that never runs", "Flags P0 — confirm the intended dataset"],
+      flow: ["Reads the data-load logic", "Finds a guarded fallback that never runs", "Flags P0 — confirm the intended dataset"],
       out: "Catches a defect that would make every number run on the wrong data.",
     },
     {
