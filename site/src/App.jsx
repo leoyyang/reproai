@@ -21,10 +21,10 @@ function Nav() {
 }
 
 const STAGES = [
-  { name: "/reproai-check", note: "Static pre-diagnose — scans, applies rules + venue, writes the advisory" },
-  { name: "/reproai-comply", note: "Venue compliance checklist (AEA, APSR, AJPS, JOP…)" },
-  { name: "/reproai-fix", note: "Rewrites the recommended fixes to a copy, re-checks" },
-  { name: "/reproai-debug", note: "Smoke-tests the copy — does it run? tables + figures emitted?", runs: true },
+  { name: "/reproai:check", note: "Static pre-diagnose — scans, applies rules + venue, writes the advisory" },
+  { name: "/reproai:comply", note: "Venue compliance checklist (AEA, APSR, AJPS, JOP…)" },
+  { name: "/reproai:fix", note: "Rewrites the recommended fixes to a copy, re-checks" },
+  { name: "/reproai:debug", note: "Smoke-tests the copy — does it run? tables + figures emitted?", runs: true },
 ];
 
 function EnginePanel() {
@@ -90,7 +90,7 @@ function EnginePanel() {
         <motion.div className="engine-evolve" variants={item}>
           <span className="evolve-dot" aria-hidden="true" />
           <div className="evolve-text">
-            <code className="stage-cmd">/reproai-update</code>
+            <code className="stage-cmd">/reproai:update</code>
             <span className="evolve-note">Outside the per-package flow — the rule set keeps evolving as more packages are seen.</span>
           </div>
         </motion.div>
@@ -181,11 +181,11 @@ function Install() {
     [OUT("✓ Installed reproai — ready to use")],
   ];
   const runLines = [
-    [P("❯ "), SLASH("/reproai-check"), TXT(" . "), FLAG("--venue aea")],
+    [P("❯ "), SLASH("/reproai:check"), TXT(" . "), FLAG("--venue aea")],
     [OUT("  advisory: P0=1 P1=1 P3=2")],
     [OUT("  venue (aea): 2 pass / 2 fail / 5 action")],
-    [P("❯ "), SLASH("/reproai-fix"), TXT(" . "), OUT("# rewrite to a copy")],
-    [P("❯ "), SLASH("/reproai-debug"), TXT(" "), OUT("# smoke-test the copy: does it run?")],
+    [P("❯ "), SLASH("/reproai:fix"), TXT(" . "), OUT("# rewrite to a copy")],
+    [P("❯ "), SLASH("/reproai:debug"), TXT(" "), OUT("# smoke-test the copy: does it run?")],
     [OUT("  ✓ runs clean · tables + figures emitted")],
   ];
   return (
