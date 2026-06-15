@@ -1,0 +1,297 @@
+schema_version: 2
+rules_version: 2026.06.16
+fields: id | category | kind | priority(P0..P4) | rule | detection | languages
+rules:
+- id: A3-data-load
+  category: structural
+  kind: defect
+  priority: P0
+  rule: Author should write an explicit data-load command in each script; do not assume a pre-loaded interactive session.
+  detection: A script runs estimation/regression commands but contains no use/load/read/import before them, and no upstream
+    script loads data first.
+  languages:
+  - stata
+  - r
+  - python
+- id: A5-stable-includes
+  category: structural
+  kind: defect
+  priority: P0
+  rule: Author should keep filenames and `do/source` include paths consistent; renames must update all references.
+  detection: A do/source/import target string does not resolve to any present file (filename mismatch).
+  languages:
+  - stata
+  - r
+  - python
+- id: A6-guarded-fallback-load
+  category: structural
+  kind: defect
+  priority: P0
+  rule: 'Author should confirm the intended primary dataset: a guarded `capture use A` + `if _rc!=0 { use B }` fallback is
+    normally unreachable when A ships, so B never loads.'
+  detection: '`capture [noisily/quietly] use FILE_A` then `if _rc != 0 { use FILE_B }` where both FILE_A and FILE_B exist
+    in the package.'
+  languages:
+  - stata
+- id: A7-var-lifecycle-contradiction
+  category: structural
+  kind: defect
+  priority: P0
+  rule: Author should not use a variable after it was dropped, excluded by keep, or renamed away — the later command will
+    fail.
+  detection: A variable appears in an estimation/use position after an explicit `drop VAR`, a `keep` that excludes it, or
+    `rename VAR newname` with no re-creation.
+  languages:
+  - stata
+- id: A8-data-ref-extension-mismatch
+  category: structural
+  kind: defect
+  priority: P0
+  rule: 'Author should reference data files by the exact shipped name+extension: a `use X.dta` (or extensionless `use X`)
+    whose file is missing while X.tab/X.csv ships will not load.'
+  detection: A use/import/insheet target does not resolve to a shipped file, but a same-stem file with a different extension
+    (.tab/.csv/.dta) exists in the package.
+  languages:
+  - stata
+- id: A9-nested-cd
+  category: structural
+  kind: defect
+  priority: P0
+  rule: Author should not `cd` into a subdirectory mid-script before relative file paths; it breaks when the package runs
+    from the root.
+  detection: A `cd "subdir"` (relative) appears in a script, followed by relative use/save/do/log paths.
+  languages:
+  - stata
+- id: B8-r-table-call-syntax
+  category: code-style
+  kind: defect
+  priority: P0
+  rule: 'Author should fix incomplete table-output calls: a stargazer()/xtable()/print.xtable() call with unbalanced delimiters
+    or a missing comma between arguments halts the script.'
+  detection: After masking strings/comments, a stargazer/xtable/texreg call has unbalanced ()[]{} across its multi-line span,
+    or an orphaned argument line after premature close.
+  languages:
+  - r
+- id: B9-suppressed-data-load
+  category: code-style
+  kind: defect
+  priority: P0
+  rule: 'Author should make data-load failures visible: wrapping `use`/`import` in `quietly` hides a missing-file error and
+    silently produces no results.'
+  detection: '`quietly`/`qui:` prefixing a use/import, or a use/import inside a `quietly { ... }` block.'
+  languages:
+  - stata
+- id: B10-embedded-foreign-code
+  category: code-style
+  kind: defect
+  priority: P0
+  rule: Author should not embed non-Stata code (R fragments, library() calls) inside a .do file; it halts Stata before the
+    regressions run.
+  detection: A .do file contains R-style `library(...)`, `<-` assignment, or `collin`/non-Stata blocks before estimation.
+  languages:
+  - stata
+- id: C2-vendor-ado
+  category: environment
+  kind: defect
+  priority: P0
+  rule: Author should vendor user-written Stata commands (ado files) inside the package, or ssc-install them in the script.
+  detection: A known user-written command (combomarginsplot, coefplot, ivreg2, weakivtest, ...) is used but no matching .ado
+    ships and no ssc/net install precedes it.
+  languages:
+  - stata
+- id: A1-master-entry
+  category: structural
+  kind: defect
+  priority: P1
+  rule: Author should provide one explicit master/entry script; do not rely on alphabetical auto-run order.
+  detection: No single script sources/does all others, OR a __run_all that depends on filename ordering.
+  languages:
+  - stata
+  - r
+  - python
+- id: B7-no-cross-script-clearall
+  category: code-style
+  kind: defect
+  priority: P1
+  rule: Author should not `clear all` between scripts in a chain; it drops programs/Mata that later scripts need.
+  detection: A non-first script in the chain begins with `clear all`.
+  languages:
+  - stata
+- id: C4-deprecated-syntax-signature
+  category: environment
+  kind: defect
+  priority: P1
+  rule: Author should avoid version-fragile command syntax (reghdfe IV-syntax, rdrobust deprecated bwselect, `table var, c(...)`,
+    `tmpdir`, legacy mixed-model commands, `cd ""`) or declare the Stata/package version it needs.
+  detection: 'Known breaking signatures: reghdfe with (endog=instr); rdrobust bwselect(CCT|IK); `table ..., c(...)`; `tmpdir`;
+    xtmelogit/meqrlogit/xtmixed; `cd ""`.'
+  languages:
+  - stata
+- id: C5-deprecated-r-packages
+  category: environment
+  kind: defect
+  priority: P1
+  rule: Author should not load removed/deprecated R packages (rgdal, rgeos, maptools, ZeligMultilevel, checkpoint, hrbrthemes);
+    loading one at the top halts the whole script.
+  detection: An uncommented `library(...)` / `require(...)` of a known-removed package.
+  languages:
+  - r
+- id: C6-old-stata-merge-syntax
+  category: environment
+  kind: defect
+  priority: P1
+  rule: Author should use modern `merge m:1`/`1:1`/`m:m` syntax; the pre-Stata-11 `merge varlist using` form fails on modern
+    Stata.
+  detection: A `merge <varlist> using ...` with no `m:1`/`1:1`/`m:m`/`1:m` join-type prefix.
+  languages:
+  - stata
+- id: B11-rmd-chunk-in-r
+  category: code-style
+  kind: defect
+  priority: P0
+  rule: Author should not leave R Markdown ```{r} chunk markers in a plain .R file; they are not valid R and cause a parse
+    error.
+  detection: A line matching ```{r in a .R file.
+  languages:
+  - r
+- id: C3-declare-stata-version
+  category: environment
+  kind: normalization
+  priority: P1
+  rule: Author should declare the Stata version (`version NN`) to avoid cross-version result drift.
+  detection: No `version NN` statement, while code uses version-sensitive commands (reghdfe, rdrobust, ivregress, etc.).
+  languages:
+  - stata
+- id: N1-no-delimit-semicolon
+  category: normalization
+  kind: normalization
+  priority: P2
+  rule: Author should break long commands with `///` line continuation instead of `#delimit ;`; the latter is easy to misparse
+    and one missed `;` silently merges commands.
+  detection: A `.do` file contains a `#delimit ;` (or `#d ;`) block.
+  languages:
+  - stata
+- id: N2-explicit-table-commands
+  category: normalization
+  kind: normalization
+  priority: P2
+  rule: Author should write one explicit estimation command per reported model rather than building a table inside a loop;
+    explicit commands make the model->cell mapping unambiguous for the pipeline and an LLM.
+  detection: Estimation commands occur inside a foreach/forvalues building a reported table (loop body contains both an estimator
+    and a table-export/store).
+  languages:
+  - stata
+- id: N3-compact-r-table-calls
+  category: normalization
+  kind: normalization
+  priority: P2
+  rule: Author should write table-output calls (stargazer/xtable) compactly with one argument per line; sprawling multi-line
+    calls are fragile to comment-cleaning and easy to misread.
+  detection: A stargazer/xtable/texreg call spans more than ~15 lines.
+  languages:
+  - r
+- id: B1-minimize-loops
+  category: code-style
+  kind: normalization
+  priority: P2
+  rule: Author should minimize for/foreach loops that build tables; loop-built exports overwrite per iteration and obscure
+    which command maps to which table.
+  detection: An export command (esttab/outreg/putexcel using a fixed filename) appears inside a foreach/for/while body.
+  languages:
+  - stata
+  - r
+- id: B2-stata-abbrev
+  category: code-style
+  kind: normalization
+  priority: P2
+  rule: Author should use full Stata variable and command names, not abbreviations; abbreviations get truncated and shift
+    coefficients.
+  detection: 'Heuristic: Stata varlists use abbreviated tokens, or known abbreviated command forms.'
+  languages:
+  - stata
+- id: N4-named-estimation-calls
+  category: normalization
+  kind: normalization
+  priority: P3
+  rule: Author should call estimators directly (named, standard commands) rather than hand-rolled scalar-wrapper programs;
+    standard calls are recognized by output capture and easier to read.
+  detection: An estimation result is produced inside a user-defined `program`/function wrapper rather than a direct estimation
+    command.
+  languages:
+  - stata
+  - r
+- id: A2-table-grouping
+  category: structural
+  kind: normalization
+  priority: P3
+  rule: Author should keep all commands that build one table together, with a 'this block -> Table X' comment.
+  detection: Estimation commands feeding the same export file are scattered across distant line ranges or files.
+  languages:
+  - stata
+  - r
+- id: A4-panel-declare
+  category: structural
+  kind: defect
+  priority: P3
+  rule: Author should declare the panel/time-series structure (tsset/xtset) before time-series operators.
+  detection: Time-series operators (L./D./F. or lag()) appear without a prior tsset/xtset/pdata.frame.
+  languages:
+  - stata
+  - r
+- id: A10-commented-restricted-regression
+  category: structural
+  kind: normalization
+  priority: P3
+  rule: Author should not silently comment out a regression citing restricted data — declare it explicitly so the package's
+    scope is clear.
+  detection: 'A commented-out estimation command with nearby comment wording: restricted / confidential / proprietary / not
+    public / unavailable.'
+  languages:
+  - stata
+  - r
+- id: B3-no-wide-wildcard
+  category: code-style
+  kind: normalization
+  priority: P3
+  rule: Author should avoid wildcard varlists that expand to very many (>20) columns in a single estimation.
+  detection: A varlist contains wildcard/stub patterns (e.g. i.*, var*) likely to expand past 20 columns.
+  languages:
+  - stata
+- id: B4-no-abs-paths
+  category: code-style
+  kind: defect
+  priority: P3
+  rule: Author should not hardcode absolute paths; use relative paths from the package root.
+  detection: A path literal starts with /, ~, a drive letter (C:\), or a UNC \\ path.
+  languages:
+  - stata
+  - r
+  - python
+- id: B5-graphics-out-of-main
+  category: code-style
+  kind: normalization
+  priority: P3
+  rule: Author should keep graphics/interactive commands out of the main analysis path.
+  detection: Graphics/interactive commands (graph, twoway, plot, View, more, pause) sit between data-load and estimation.
+  languages:
+  - stata
+  - r
+- id: B6-rederive-from-raw
+  category: code-style
+  kind: normalization
+  priority: P3
+  rule: Author should re-derive analysis variables from raw data, not consume opaque pre-computed derived columns.
+  detection: Analysis reads a derived/intermediate dataset that no shipped script regenerates from raw.
+  languages:
+  - stata
+  - r
+  - python
+- id: C1-pin-deps
+  category: environment
+  kind: normalization
+  priority: P3
+  rule: Author should pin dependency versions; do not use floating versions or direct-from-GitHub installs.
+  detection: install.packages/pip install without version pins, or devtools::install_github / pip git+ URLs.
+  languages:
+  - r
+  - python

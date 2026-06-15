@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "reproai",
+  "displayName": "ReproAI — replication package pre-diagnose",
+  "version": "0.3.0",
+  "description": "Author-facing, static pre-diagnose for replication packages. Scans a working directory, applies an author rule set and a venue profile (AEA, ...), and advises how to reorganize the package so a downstream reproducibility check passes on the first try. Never executes author code; never issues a reproducibility verdict.",
+  "author": {
+    "name": "reproAI"
+  },
+  "homepage": "https://github.com/statsclaw",
+  "license": "MIT",
+  "keywords": [
+    "replication",
+    "reproducibility",
+    "pre-diagnose",
+    "aea",
+    "stata",
+    "r",
+    "static-analysis"
+  ]
+}

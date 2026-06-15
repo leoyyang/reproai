@@ -1,0 +1,44 @@
+---
+name: reproai-update
+description: Show the installed reproai knowledge version and how to update to the latest rule set. Use when the author asks whether their rules are current, or how reproai stays up to date.
+---
+
+# /reproai update — knowledge version & update
+
+reproai ships a **knowledge base** (author rule set + venue profiles + style guide) that grows as the
+downstream reproducibility pipeline (Line 2) learns from new replication packages. The rules are
+data, not code, so they update independently of how a single package is diagnosed.
+
+## Show what's installed
+
+Run a check and read the `knowledge_versions` block of the result, or:
+
+```bash
+line1 check . --json | python3 -c "import json,sys;print(json.load(sys.stdin)['knowledge_versions'])"
+```
+
+It reports `engine` (code version), `rules_version` (date-based, e.g. 2026.06.15), and each venue
+profile version. The `line1 check` summary line also prints `knowledge: engine X, rules Y`.
+
+## Update to the latest
+
+reproai is distributed through the Plugin Marketplace; a new rules_version ships as a new plugin
+version. To update:
+
+```
+/plugin marketplace update statsclaw      # refresh the marketplace listing
+/plugin update reproai                      # install the latest reproai (new rules included)
+```
+
+Then `/reload-plugins` (or restart) so the new rules and agents load.
+
+## How new rules get in (for maintainers)
+
+```
+Line 2 lessons  ──tools/distill_rules.py──▶  rules-seedbank/candidates.json  ──human review──▶
+tools/promote_rule.py  ──▶  author_rules.yaml (rules_version bumped, CHANGELOG updated)  ──▶
+tools/bump_version.py  ──▶  plugin/marketplace/pyproject versions in lockstep  ──▶  publish
+```
+
+Nothing enters the shipped rule set without human review (anti-noise principle). See
+`rules-seedbank/README.md`.
