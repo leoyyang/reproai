@@ -19,6 +19,9 @@ _EXPORT_FIXED = re.compile(r'\b(esttab|estout|outreg2?|putexcel|tabout)\b[^\r\n]
 _TS_OP = re.compile(r'(?<![\w.])([LDF]\d*\.\w+)')
 _TSSET = re.compile(r'^\s*(tsset|xtset)\b', re.IGNORECASE | re.MULTILINE)
 _ESTIMATION = re.compile(r'^\s*(reg|regress|areg|xtreg|reghdfe|ivreg\w*|ivregress|logit|probit|tobit|glm|xtivreg\w*|melogit|mlogit)\b', re.IGNORECASE | re.MULTILINE)
+# R estimators are almost always ASSIGNED (m <- lm(...), fit = ivreg(...)) so the verb is not at
+# line start; match an optional `name <-`/`name =` then a known R estimator call.
+_R_ESTIMATION = re.compile(r'(?:^|<-|=|\(|\s)\s*(lm|glm|lm_robust|iv_robust|ivreg|ivreg2|felm|feols|feglm|plm|lmer|glmer|polr|multinom|gam|coxph|survreg|rdrobust|rdd_reg)\s*\(', re.IGNORECASE)
 _DATA_LOAD_STATA = re.compile(r'^\s*(use|import|insheet|infile|odbc)\b', re.IGNORECASE | re.MULTILINE)
 _DATA_LOAD_R = re.compile(r'\b(read\.|read_|load\(|readRDS\(|fread\()', re.MULTILINE)
 _GITHUB_INSTALL = re.compile(r'(install_github|pip install\s+git\+|remotes::install)', re.IGNORECASE)
@@ -64,7 +67,7 @@ _R_TABLE_CALL_LONG = re.compile(r'\b(stargazer|xtable|texreg|htmlreg|screenreg)\
 _PROGRAM_DEF = re.compile(r'^\s*program\s+(?:define\s+)?(\w+)', re.IGNORECASE)
 
 # D1 artifact-output coverage
-_TABLE_EXPORT = re.compile(r'\b(esttab|estout|outreg2?|putexcel|putdocx|tabout|stargazer|texreg|htmlreg|write[._]csv|write[._]dta|export\s+delimited)\b', re.IGNORECASE)
+_TABLE_EXPORT = re.compile(r'\b(esttab|estout|outreg2?|putexcel|putdocx|tabout|stargazer|texreg|htmlreg|etable|modelsummary|write[._]csv|write[._]dta|saveRDS|export\s+delimited)\b', re.IGNORECASE)
 _GRAPH_CMD = re.compile(r'^\s*(graph\s+(?:twoway|bar|box|matrix|combine|tw)|twoway|histogram|scatter|kdensity|coefplot|marginsplot|ggplot|plot\()', re.IGNORECASE)
 _GRAPH_EXPORT = re.compile(r'\b(graph\s+export|graph\s+save|ggsave|gr\s+export|dev\.copy|pdf\(|png\(|postscript\()', re.IGNORECASE)
 # D3 intermediate data write / read
@@ -421,6 +424,14 @@ def _detect_wrapper_estimation(path: str, text: str) -> list[dict[str, Any]]:
     return hits
 
 
+def _is_estimation(line: str) -> bool:
+    return bool(_ESTIMATION.match(line) or _R_ESTIMATION.search(line))
+
+
+def _has_estimation(text: str) -> bool:
+    return bool(_ESTIMATION.search(text)) or any(_R_ESTIMATION.search(ln) for ln in text.splitlines())
+
+
 def _section_spans(lines: list[str], header_re: re.Pattern[str]) -> list[tuple[str, int, int]]:
     starts = [(i, header_re.search(ln)) for i, ln in enumerate(lines)]
     headers = [(i, f"{m.group(1)} {m.group(2)}") for i, m in starts if m]
@@ -439,16 +450,15 @@ def _detect_uncaptured_artifacts(path: str, text: str) -> list[dict[str, Any]]:
     if table_spans:
         for label, start, end in table_spans:
             body = lines[start:end]
-            has_est = any(_ESTIMATION.match(ln) for ln in body)
+            has_est = any(_is_estimation(ln) for ln in body)
             has_exp = any(_TABLE_EXPORT.search(_mask_r_strings_comments(ln)) for ln in body)
             if has_est and not has_exp:
                 hits.append(_ev(path, start + 1, f"{label}: estimations build this table but no export saves it to output/tables/"))
     else:
-        has_est = bool(_ESTIMATION.search(text))
+        first = next((i for i, ln in enumerate(lines) if _is_estimation(ln)), None)
         has_exp = any(_TABLE_EXPORT.search(_mask_r_strings_comments(ln)) for ln in lines)
-        if has_est and not has_exp:
-            m = _ESTIMATION.search(text)
-            hits.append(_ev(path, text[:m.start()].count("\n") + 1, "estimations build a table but no export saves coefficients to output/tables/"))
+        if first is not None and not has_exp:
+            hits.append(_ev(path, first + 1, "estimations build a table but no export saves coefficients to output/tables/"))
 
     figure_spans = _section_spans(lines, _FIGURE_HEADER)
     if figure_spans:
@@ -471,7 +481,7 @@ def _detect_uncaptured_artifacts(path: str, text: str) -> list[dict[str, Any]]:
 
 def _detect_missing_table_comments(path: str, text: str) -> list[dict[str, Any]]:
     lines = text.splitlines()
-    est_lines = [i + 1 for i, ln in enumerate(lines) if _ESTIMATION.match(ln)]
+    est_lines = [i + 1 for i, ln in enumerate(lines) if _is_estimation(ln)]
     if len(est_lines) < 2:
         return []
     has_table_comment = any(_TABLE_HEADER.search(ln) or _FIGURE_HEADER.search(ln) for ln in lines)
@@ -576,7 +586,7 @@ def run(root: Path, entries: list[FileEntry], edges: list[Edge], table_exports) 
                 if loop_depth > 0 and _EXPORT_FIXED.search(line):
                     emit("B1-minimize-loops", [_ev(path, line_no, line)],
                          "Fixed-filename table export inside a loop overwrites per iteration.")
-                if loop_depth > 0 and _ESTIMATION.match(line):
+                if loop_depth > 0 and _is_estimation(line):
                     emit("N2-explicit-table-commands", [_ev(path, line_no, line)],
                          "Estimation inside a loop hides the model->table-cell mapping from the pipeline.")
                 if re.match(r'^\s*\}', line) and loop_depth > 0:
@@ -628,7 +638,7 @@ def run(root: Path, entries: list[FileEntry], edges: list[Edge], table_exports) 
                  "Commented-out regression with nearby restricted-data wording.")
 
         if lang == "r":
-            if _ESTIMATION.search(text) and not _DATA_LOAD_R.search(text):
+            if _has_estimation(text) and not _DATA_LOAD_R.search(text):
                 if not _upstream_loads_data(path, edges, texts, _DATA_LOAD_R):
                     emit("A3-data-load", [_ev(path)],
                          "Estimation present but no read/load in this script, and no upstream script loads data first.")
