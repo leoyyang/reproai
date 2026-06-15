@@ -201,22 +201,22 @@ body {
 
 .term {
   font-family: var(--mono); font-size: 12.8px; line-height: 1.75;
-  background: #0f1b24; color: #cdd6df;
-  border: 1px solid #1e2d39;
+  background: var(--paper-2); color: var(--ink);
+  border: 1px solid var(--line);
   border-radius: 11px; padding: 16px 17px; margin: 0;
   overflow-x: auto;
 }
 .term-line { white-space: pre; }
-.tk.prompt { color: #6b7c89; }
-.tk.cmd { color: #38bdf8; }
-.tk.slash { color: #34d399; font-weight: 500; }
-.tk.flag { color: #fbbf24; }
-.tk.out { color: #6b7c89; }
-.tk.bib-at { color: #c084fc; font-weight: 500; }
-.tk.bib-key { color: #fbbf24; }
-.tk.bib-field { color: #38bdf8; }
-.tk.bib-val { color: #34d399; }
-.tk.bib-pun { color: #6b7c89; }
+.tk.prompt { color: #8a8579; }
+.tk.cmd { color: #2563a6; }
+.tk.slash { color: var(--red); font-weight: 600; }
+.tk.flag { color: #a85f0a; }
+.tk.out { color: #7c776c; }
+.tk.bib-at { color: #8a5cb8; font-weight: 600; }
+.tk.bib-key { color: #b5670c; }
+.tk.bib-field { color: #2563a6; }
+.tk.bib-val { color: #3f7d4e; }
+.tk.bib-pun { color: #9b9588; }
 
 .flow { margin: 12px 0 16px; padding-left: 18px; color: var(--ink); }
 .flow li { font-size: 15px; margin-bottom: 6px; }

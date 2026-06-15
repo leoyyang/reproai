@@ -23,7 +23,7 @@ function Nav() {
 const STAGES = [
   { name: "Architect", note: "Recovers workflow, maps tables, flags orphans" },
   { name: "Provisioner", note: "Pins the environment, vendors dependencies" },
-  { name: "Complier", note: "Checks the target-venue standard" },
+  { name: "Compiler", note: "Checks the target-venue standard" },
   { name: "Reviewer", note: "Cross-checks findings (deterministic)" },
 ];
 
