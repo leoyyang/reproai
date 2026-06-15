@@ -14,7 +14,7 @@ Run only the venue-compliance line of the deterministic engine.
 2. Run:
 
    ```bash
-   line1 check <ROOT> --venue <VENUE> --out <ROOT>/.reproai/reports
+   reproai check <ROOT> --venue <VENUE> --out <ROOT>/.reproai/reports
    ```
 
 3. Read `venue_compliance_report.json` and present the checklist: each requirement with its

@@ -22,7 +22,7 @@ validate = ["jsonschema>=4.0"]
 dev = ["pytest>=7.0", "jsonschema>=4.0"]
 
 [project.scripts]
-line1 = "line1_core.cli:main"
+reproai = "line1_core.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -17,10 +17,10 @@ never execute the author's code.
 2. Run the core engine:
 
    ```bash
-   line1 check <ROOT> --venue <VENUE> --out <ROOT>/.reproai/reports
+   reproai check <ROOT> --venue <VENUE> --out <ROOT>/.reproai/reports
    ```
 
-   If `line1` is not on PATH, run from the bundled core:
+   If `reproai` is not on PATH, run from the bundled core:
 
    ```bash
    PYTHONPATH="${CLAUDE_PLUGIN_ROOT}/core/src" python3 -m line1_core.cli check <ROOT> --venue <VENUE> --out <ROOT>/.reproai/reports

@@ -63,6 +63,17 @@ _DELIMIT = re.compile(r'^\s*#delimit\s*;|^\s*#d\s*;', re.IGNORECASE)
 _R_TABLE_CALL_LONG = re.compile(r'\b(stargazer|xtable|texreg|htmlreg|screenreg)\s*\(', re.IGNORECASE)
 _PROGRAM_DEF = re.compile(r'^\s*program\s+(?:define\s+)?(\w+)', re.IGNORECASE)
 
+# D1 artifact-output coverage
+_TABLE_EXPORT = re.compile(r'\b(esttab|estout|outreg2?|putexcel|putdocx|tabout|stargazer|texreg|htmlreg|write[._]csv|write[._]dta|export\s+delimited)\b', re.IGNORECASE)
+_GRAPH_CMD = re.compile(r'^\s*(graph\s+(?:twoway|bar|box|matrix|combine|tw)|twoway|histogram|scatter|kdensity|coefplot|marginsplot|ggplot|plot\()', re.IGNORECASE)
+_GRAPH_EXPORT = re.compile(r'\b(graph\s+export|graph\s+save|ggsave|gr\s+export|dev\.copy|pdf\(|png\(|postscript\()', re.IGNORECASE)
+# D3 intermediate data write / read
+_DATA_WRITE = re.compile(r'^\s*(?:cap(?:ture)?\s+|qui(?:etly)?\s+)*(save|saveold|export\s+delimited|outsheet|saveRDS|write[._]csv|write[._]dta|write[._]rds|haven::write_dta|saveRDS)\b[^\r\n]*?["\']?([\w./\\-]+\.(?:dta|csv|rds|rdata|tab|parquet))["\']?', re.IGNORECASE)
+_FILE_EXISTS_GUARD = re.compile(r'(confirm\s+file|file\.exists|os\.path\.exists|assert\s+_rc|fileexists)', re.IGNORECASE)
+# D1 table/figure section headers in comments (e.g. "* Table 3: ..." / "# Figure 2")
+_TABLE_HEADER = re.compile(r'^\s*(?:\*+|//+|#+)\s*\**\s*(Table|Tabla)\s+([A-Za-z]?\.?\d+)\b', re.IGNORECASE)
+_FIGURE_HEADER = re.compile(r'^\s*(?:\*+|//+|#+)\s*\**\s*(Figure|Fig\.?|Figura)\s+([A-Za-z]?\.?\d+)\b', re.IGNORECASE)
+
 
 @dataclass
 class Finding:
@@ -74,6 +85,10 @@ class Finding:
     evidence: list[dict[str, Any]]
     rationale: str
     source_lessons: list[str]
+    why_downstream: str = ""
+    target_form: str = ""
+    lossless_note: str = ""
+    propose_only: bool = False
 
 
 def load_rules() -> list[dict[str, Any]]:
@@ -406,6 +421,82 @@ def _detect_wrapper_estimation(path: str, text: str) -> list[dict[str, Any]]:
     return hits
 
 
+def _section_spans(lines: list[str], header_re: re.Pattern[str]) -> list[tuple[str, int, int]]:
+    starts = [(i, header_re.search(ln)) for i, ln in enumerate(lines)]
+    headers = [(i, f"{m.group(1)} {m.group(2)}") for i, m in starts if m]
+    spans = []
+    for k, (i, label) in enumerate(headers):
+        end = headers[k + 1][0] if k + 1 < len(headers) else len(lines)
+        spans.append((label, i, end))
+    return spans
+
+
+def _detect_uncaptured_artifacts(path: str, text: str) -> list[dict[str, Any]]:
+    lines = text.splitlines()
+    hits: list[dict[str, Any]] = []
+
+    table_spans = _section_spans(lines, _TABLE_HEADER)
+    if table_spans:
+        for label, start, end in table_spans:
+            body = lines[start:end]
+            has_est = any(_ESTIMATION.match(ln) for ln in body)
+            has_exp = any(_TABLE_EXPORT.search(_mask_r_strings_comments(ln)) for ln in body)
+            if has_est and not has_exp:
+                hits.append(_ev(path, start + 1, f"{label}: estimations build this table but no export saves it to output/tables/"))
+    else:
+        has_est = bool(_ESTIMATION.search(text))
+        has_exp = any(_TABLE_EXPORT.search(_mask_r_strings_comments(ln)) for ln in lines)
+        if has_est and not has_exp:
+            m = _ESTIMATION.search(text)
+            hits.append(_ev(path, text[:m.start()].count("\n") + 1, "estimations build a table but no export saves coefficients to output/tables/"))
+
+    figure_spans = _section_spans(lines, _FIGURE_HEADER)
+    if figure_spans:
+        for label, start, end in figure_spans:
+            body = lines[start:end]
+            has_graph = any(_GRAPH_CMD.search(ln) for ln in body)
+            has_exp = any(_GRAPH_EXPORT.search(ln) for ln in body)
+            if has_graph and not has_exp:
+                hits.append(_ev(path, start + 1, f"{label}: figure produced but no graph-export saves it to output/figures/"))
+    else:
+        has_graph = any(_GRAPH_CMD.search(ln) for ln in lines)
+        has_exp = any(_GRAPH_EXPORT.search(ln) for ln in lines)
+        if has_graph and not has_exp:
+            for i, ln in enumerate(lines, start=1):
+                if _GRAPH_CMD.search(ln):
+                    hits.append(_ev(path, i, "figure produced but no graph-export saves it to output/figures/"))
+                    break
+    return hits
+
+
+def _detect_missing_table_comments(path: str, text: str) -> list[dict[str, Any]]:
+    lines = text.splitlines()
+    est_lines = [i + 1 for i, ln in enumerate(lines) if _ESTIMATION.match(ln)]
+    if len(est_lines) < 2:
+        return []
+    has_table_comment = any(_TABLE_HEADER.search(ln) or _FIGURE_HEADER.search(ln) for ln in lines)
+    if has_table_comment:
+        return []
+    return [_ev(path, est_lines[0], f"{len(est_lines)} estimation commands, none anchored by a `* --> Table N` comment")]
+
+
+def _detect_intermediate_data(root: Path, path: str, text: str, edges: list[Edge], texts: dict[str, str]) -> list[dict[str, Any]]:
+    hits: list[dict[str, Any]] = []
+    for i, line in enumerate(text.splitlines(), start=1):
+        m = _DATA_WRITE.search(line)
+        if not m:
+            continue
+        target = m.group(2).strip().replace("\\", "/")
+        name = Path(target).name
+        read_elsewhere = any(name in t for p, t in texts.items() if p != path)
+        if not read_elsewhere:
+            continue
+        in_data_dir = "data/" in target.lower() or target.lower().startswith("data")
+        if not in_data_dir:
+            hits.append(_ev(path, i, f"writes intermediate '{name}' read by another script, but not under a canonical data/ folder"))
+    return hits
+
+
 def run(root: Path, entries: list[FileEntry], edges: list[Edge], table_exports) -> list[Finding]:
     root = root.resolve()
     rules = {r["id"]: r for r in load_rules()}
@@ -427,19 +518,55 @@ def run(root: Path, entries: list[FileEntry], edges: list[Edge], table_exports) 
                 evidence=evidence,
                 rationale=rationale,
                 source_lessons=r.get("source_lessons", []),
+                why_downstream=r.get("why_downstream", ""),
+                target_form=r.get("target_form", ""),
+                lossless_note=r.get("lossless_note", ""),
+                propose_only=bool(r.get("propose_only", False)),
             )
         )
 
     callers = {e.src for e in edges if e.kind in {"do", "source"}}
-    if not callers and len([e for e in entries if e.language in {"stata", "r", "python"}]) > 1:
+    script_paths = [e.path for e in entries if e.language in {"stata", "r", "python"}]
+    if not callers and len(script_paths) > 1:
         emit("A1-master-entry", [_ev(p) for p in sorted(texts)][:1],
              "No script sources/does any other; build order is implicit.")
+        readme_has_order = any(
+            re.search(r'(run|execut|order|step\s*\d|^\s*\d+[.)]\s)', (root / e.path).read_text(encoding="utf-8", errors="replace"), re.IGNORECASE | re.MULTILINE)
+            for e in entries if e.language == "doc" and e.path.lower().endswith((".md", ".txt"))
+        )
+        if not readme_has_order:
+            emit("A11-explicit-run-order", [_ev(p) for p in sorted(script_paths)][:1],
+                 f"{len(script_paths)} analysis scripts, no master script and no README run-order.")
+
+    doc_files = [e.path for e in entries if e.language == "doc" and e.path.lower().endswith((".md", ".txt"))]
+    data_files = [e.path for e in entries if e.language == "data"]
+    n_files = len(script_paths) + len(data_files)
+    if n_files > 1:
+        documented = set()
+        for d in doc_files:
+            dtext = (root / d).read_text(encoding="utf-8", errors="replace")
+            for fp in script_paths + data_files:
+                if Path(fp).name in dtext:
+                    documented.add(fp)
+        undocumented = [fp for fp in script_paths + data_files if fp not in documented]
+        if undocumented:
+            detail = "no README" if not doc_files else f"{len(undocumented)} of {n_files} files not described in any README"
+            emit("D4-per-file-documentation", [_ev(p) for p in sorted(undocumented)][:8],
+                 f"{detail}; per-file documentation (purpose, inputs/outputs, codebook) missing.")
 
     for path, text in texts.items():
         lang = _lang_of(entries, path)
 
         for line_no, line in _line_hits(text, _ABS_PATH):
             emit("B4-no-abs-paths", [_ev(path, line_no, line)], "Absolute path literal found.")
+
+        if lang in {"stata", "r"}:
+            emit("A12-table-comment-mapping", _detect_missing_table_comments(path, text),
+                 "Multiple estimations with no `-> Table N` comments anchoring the table<->command mapping.")
+            emit("D1-output-artifact-coverage", _detect_uncaptured_artifacts(path, text),
+                 "Estimation/figure present but no export saves the artifact to a relative output/ folder.")
+            emit("D3-intermediate-data-hygiene", _detect_intermediate_data(root, path, text, edges, texts),
+                 "Intermediate dataset written outside a canonical data/ folder is read by another script.")
 
         if lang in {"stata", "r"}:
             loop_depth = 0

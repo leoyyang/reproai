@@ -5,16 +5,23 @@
   "type": "object",
   "required": ["schema_version", "generated_by", "root", "items"],
   "properties": {
-    "schema_version": { "type": "integer", "const": 2 },
+    "schema_version": { "type": "integer", "const": 3 },
     "generated_by": { "type": "string" },
     "root": { "type": "string" },
+    "lossless_contract": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Universal semantics-preserving contract every host-LLM rewrite must honor."
+    },
     "summary": {
       "type": "object",
       "properties": {
         "total": { "type": "integer" },
         "by_priority": { "type": "object" },
         "defect": { "type": "integer" },
-        "normalization": { "type": "integer" }
+        "normalization": { "type": "integer" },
+        "llm_rewrite": { "type": "integer" },
+        "propose_only": { "type": "integer" }
       }
     },
     "items": {
@@ -50,7 +57,22 @@
             }
           },
           "rationale": { "type": "string", "description": "Deterministic reason this was flagged." },
-          "source_lessons": { "type": "array", "items": { "type": "string" } }
+          "source_lessons": { "type": "array", "items": { "type": "string" } },
+          "why_downstream": { "type": "string", "description": "How this finding hurts a downstream reproducibility run." },
+          "target_form": { "type": "string", "description": "What the corrected code should look like." },
+          "rewrite": {
+            "type": "object",
+            "required": ["mode", "fix_prompt"],
+            "properties": {
+              "mode": {
+                "type": "string",
+                "enum": ["llm_rewrite", "propose_only"],
+                "description": "llm_rewrite = host LLM may apply the fix to a copy; propose_only = describe to author, never auto-edit."
+              },
+              "lossless_note": { "type": "string", "description": "Per-rule semantics-preserving boundary for the rewrite." },
+              "fix_prompt": { "type": "string", "description": "Self-contained natural-language rewrite directive for the host LLM." }
+            }
+          }
         }
       }
     }

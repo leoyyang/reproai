@@ -56,6 +56,48 @@ def architecture_report(root, entries, edges, exports, orphans) -> dict[str, Any
 
 _PRIORITY_ORDER = {"P0": 0, "P1": 1, "P2": 2, "P3": 3, "P4": 4}
 
+# Universal lossless contract every host-LLM rewrite must honor, regardless of rule.
+_LOSSLESS_CONTRACT = [
+    "Work on a COPY of the package; never modify the author's original files.",
+    "The rewrite MUST be semantics-preserving: the code must compute exactly the same "
+    "results (same coefficients, same sample, same data, same file targets).",
+    "Formatting / structural normalization is allowed (e.g. unrolling a foreach loop into "
+    "explicit per-model commands, reflowing a call) — changing what the code computes is NOT.",
+    "If you cannot make the change without risking a semantic change, do NOT apply it — leave "
+    "it as a written recommendation for the author instead.",
+]
+
+
+def _evidence_lines(evidence: list[dict[str, Any]]) -> str:
+    parts = []
+    for e in evidence:
+        loc = e.get("file", "?")
+        if e.get("line") is not None:
+            loc += f":{e['line']}"
+        snip = e.get("snippet")
+        parts.append(f"{loc}  {snip}" if snip else loc)
+    return "; ".join(parts)
+
+
+def _fix_prompt(f: Finding) -> str:
+    """A self-contained natural-language rewrite directive for the host LLM."""
+    mode = (
+        "PROPOSE ONLY — describe the fix to the author; do NOT edit code (this finding is "
+        "too semantic to rewrite safely)."
+        if f.propose_only
+        else "REWRITE — apply this fix to the copy, honoring the lossless contract."
+    )
+    lines = [
+        f"[{f.rule_id} | {f.priority} | {f.kind}] {mode}",
+        f"PROBLEM: {f.message}",
+        f"WHERE: {_evidence_lines(f.evidence)}",
+        f"WHY IT HURTS DOWNSTREAM: {f.why_downstream or f.rationale}",
+        f"TARGET FORM: {f.target_form}",
+    ]
+    if f.lossless_note:
+        lines.append(f"LOSSLESS BOUNDARY FOR THIS RULE: {f.lossless_note}")
+    return "\n".join(lines)
+
 
 def advisory_plan(root, findings: list[Finding]) -> dict[str, Any]:
     ordered = sorted(findings, key=lambda f: _PRIORITY_ORDER.get(f.priority, 9))
@@ -71,17 +113,27 @@ def advisory_plan(root, findings: list[Finding]) -> dict[str, Any]:
             "evidence": f.evidence,
             "rationale": f.rationale,
             "source_lessons": f.source_lessons,
+            "why_downstream": f.why_downstream,
+            "target_form": f.target_form,
+            "rewrite": {
+                "mode": "propose_only" if f.propose_only else "llm_rewrite",
+                "lossless_note": f.lossless_note,
+                "fix_prompt": _fix_prompt(f),
+            },
         })
     by_priority = {p: sum(1 for it in items if it["priority"] == p) for p in ["P0", "P1", "P2", "P3", "P4"]}
     return {
-        "schema_version": 2,
+        "schema_version": 3,
         "generated_by": GENERATED_BY,
         "root": str(root),
+        "lossless_contract": _LOSSLESS_CONTRACT,
         "summary": {
             "total": len(items),
             "by_priority": by_priority,
             "defect": sum(1 for it in items if it["kind"] == "defect"),
             "normalization": sum(1 for it in items if it["kind"] == "normalization"),
+            "llm_rewrite": sum(1 for it in items if it["rewrite"]["mode"] == "llm_rewrite"),
+            "propose_only": sum(1 for it in items if it["rewrite"]["mode"] == "propose_only"),
         },
         "items": items,
     }

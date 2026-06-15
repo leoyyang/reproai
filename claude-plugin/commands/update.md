@@ -14,11 +14,11 @@ data, not code, so they update independently of how a single package is diagnose
 Run a check and read the `knowledge_versions` block of the result, or:
 
 ```bash
-line1 check . --json | python3 -c "import json,sys;print(json.load(sys.stdin)['knowledge_versions'])"
+reproai check . --json | python3 -c "import json,sys;print(json.load(sys.stdin)['knowledge_versions'])"
 ```
 
 It reports `engine` (code version), `rules_version` (date-based, e.g. 2026.06.15), and each venue
-profile version. The `line1 check` summary line also prints `knowledge: engine X, rules Y`.
+profile version. The `reproai check` summary line also prints `knowledge: engine X, rules Y`.
 
 ## Update to the latest
 

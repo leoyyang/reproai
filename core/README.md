@@ -34,10 +34,10 @@ single core asset behind every distribution adapter (Claude Plugin, Codex plugin
 
 ```bash
 pip install -e .          # from this directory
-line1 check . --venue aea --out reports/
+reproai check . --venue aea --out reports/
 ```
 
-`line1 check` is the one-shot self-check: inventory → rules + venue → reports. It **never executes
+`reproai check` is the one-shot self-check: inventory → rules + venue → reports. It **never executes
 author code** and **never decides reproducibility** — it only advises.
 
 ## Anti-sycophancy

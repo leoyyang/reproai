@@ -22,7 +22,7 @@ author. You orchestrate; the engine decides. You hold the hard boundary for the 
    venue profile) produce findings independently. Do not let one rewrite the other's conclusions.
 
 ## Workflow
-1. Run `line1 check <ROOT> --venue <VENUE> --out <ROOT>/.reproai/reports` (or via the bundled core with
+1. Run `reproai check <ROOT> --venue <VENUE> --out <ROOT>/.reproai/reports` (or via the bundled core with
    `PYTHONPATH=${CLAUDE_PLUGIN_ROOT}/core/src python3 -m line1_core.cli ...`).
 2. Hand `architecture_report.json` + `advisory_plan.json` to the Architect for explanation.
 3. Hand `environment_*`/dependency findings to the Provisioner.

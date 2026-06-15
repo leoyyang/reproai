@@ -43,7 +43,7 @@ def _cmd_check(args: argparse.Namespace) -> int:
     else:
         bp = adv["by_priority"]
         kv = result["knowledge_versions"]
-        print(f"line1 check — {root}")
+        print(f"reproai check — {root}")
         print(f"  knowledge: engine {kv['engine']}, rules {kv['rules_version']}")
         print(f"  advisory: {adv['total']} items "
               f"(P0={bp['P0']} P1={bp['P1']} P2={bp['P2']} P3={bp['P3']} P4={bp['P4']}; "
@@ -105,10 +105,10 @@ def _cmd_fix(args: argparse.Namespace) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="line1",
-        description="Line 1 pre-diagnose: static, no-execution audit of a replication package.",
+        prog="reproai",
+        description="ReproAI pre-diagnose: static, no-execution audit of a replication package.",
     )
-    parser.add_argument("--version", action="version", version=f"line1 {__version__}")
+    parser.add_argument("--version", action="version", version=f"reproai {__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
 
     check = sub.add_parser("check", help="One-shot static self-check: scan + rules + venue -> JSON reports.")
