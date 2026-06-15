@@ -26,7 +26,7 @@ reproai is distributed through the Plugin Marketplace; a new rules_version ships
 version. To update:
 
 ```
-/plugin marketplace update statsclaw      # refresh the marketplace listing
+/plugin marketplace update reproai        # refresh the marketplace listing
 /plugin update reproai                      # install the latest reproai (new rules included)
 ```
 
