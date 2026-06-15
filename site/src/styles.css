@@ -255,9 +255,32 @@ body {
 /* responsive */
 @media (max-width: 900px) {
   .hero { grid-template-columns: 1fr; gap: 36px; padding-bottom: 56px; }
-  .hero h1 { font-size: 44px; }
+  .hero h1 { font-size: 40px; }
   .cards.two, .cards.four { grid-template-columns: 1fr; }
-  .nav-links { display: none; }
+  .nav-links { gap: 18px; }
+  .nav-links a { font-size: 14px; }
   .section { padding: 52px 22px; }
   .section-head h2 { font-size: 31px; }
+}
+
+@media (max-width: 560px) {
+  .nav {
+    flex-direction: column; align-items: flex-start; gap: 12px; padding: 18px 20px;
+  }
+  .nav-links {
+    width: 100%; gap: 14px 20px; flex-wrap: wrap;
+  }
+  .nav-links a { font-size: 14px; }
+  .hero { padding: 20px 20px 48px; }
+  .hero h1 { font-size: 33px; }
+  .lede { font-size: 17px; }
+  .cta { flex-direction: column; align-items: stretch; }
+  .cta .btn { text-align: center; }
+  .section { padding: 44px 20px; }
+  .section-head h2 { font-size: 27px; }
+  .section-head p { font-size: 16px; }
+  .term { font-size: 11.6px; padding: 14px 14px; }
+  .term-line { white-space: pre-wrap; word-break: break-word; }
+  .faq-q { font-size: 16.5px; }
+  .footer-inner { flex-direction: column; align-items: flex-start; gap: 14px; }
 }
