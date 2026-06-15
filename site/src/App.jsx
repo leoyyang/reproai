@@ -21,10 +21,11 @@ function Nav() {
 }
 
 const STAGES = [
-  { name: "Architect", note: "Recovers workflow, maps tables, flags orphans" },
+  { name: "Architect", note: "Recovers the workflow, maps tables, flags orphans" },
   { name: "Provisioner", note: "Pins the environment, vendors dependencies" },
-  { name: "Compiler", note: "Checks the target-venue standard" },
-  { name: "Reviewer", note: "Cross-checks findings (deterministic)" },
+  { name: "Complier", note: "Checks the target-venue standard" },
+  { name: "Adversarial Reviewer", note: "Cross-checks the two lines (deterministic)" },
+  { name: "Distiller", note: "Proposes reusable rules (with your consent)" },
 ];
 
 function EnginePanel() {
@@ -53,7 +54,7 @@ function EnginePanel() {
 
       <div className="engine-head">
         <div className="lights"><i className="l r" /><i className="l y" /><i className="l g" /></div>
-        <span className="engine-title">ReproAI engine · static, no execution</span>
+        <span className="engine-title">ReproAI · 5-agent static pre-diagnose</span>
       </div>
 
       <motion.div className="engine-body" variants={container}>
@@ -99,8 +100,9 @@ function Hero() {
         <p className="lede">
           ReproAI is a plugin that helps authors construct a cleaner, more readable replication
           package before submission — so a journal&apos;s data editor or associate editor can reproduce
-          the results with far less friction. It pre-diagnoses your package and applies only safe
-          fixes; it never runs your code and never judges your results.
+          the results with far less friction. A 5-agent static team pre-diagnoses your package and
+          rewrites a copy; an optional smoke test then confirms the copy actually runs. It never
+          judges whether your results are correct — that stays your science.
         </p>
         <div className="cta">
           <a className="btn primary" href={GH}>View on GitHub</a>
@@ -172,8 +174,9 @@ function Install() {
     [P("❯ "), SLASH("/reproai-check"), TXT(" . "), FLAG("--venue aea")],
     [OUT("  advisory: P0=1 P1=1 P3=2")],
     [OUT("  venue (aea): 2 pass / 2 fail / 5 action")],
-    [P("❯ "), SLASH("/reproai-fix"), TXT(" . "), OUT("# dry-run, copy only")],
-    [P("❯ "), SLASH("/reproai-comply"), TXT(" "), FLAG("--venue ajps")],
+    [P("❯ "), SLASH("/reproai-fix"), TXT(" . "), OUT("# rewrite to a copy")],
+    [P("❯ "), SLASH("/reproai-debug"), TXT(" "), OUT("# smoke-test the copy: does it run?")],
+    [OUT("  ✓ runs clean · tables + figures emitted")],
   ];
   return (
     <section id="install" className="section">
@@ -187,8 +190,8 @@ function Install() {
         </div>
         <div className="card">
           <span className="redline" />
-          <h3>Run the pre-diagnose</h3>
-          <p>Point ReproAI at your package and it tells you exactly what to clean up so a data editor can reproduce it on the first try — a priority-graded advisory, a venue-compliance report, and a risk register — applying only safe fixes to a copy.</p>
+          <h3>Pre-diagnose, fix, smoke-test</h3>
+          <p><code>check</code>, <code>comply</code> and <code>fix</code> are static — they read your package and rewrite a copy without running anything. The optional <code>debug</code> step then runs that copy as a smoke test: does it execute end-to-end and emit its tables and figures? Every runtime fix is your call.</p>
           <Term lines={runLines} />
         </div>
       </div>
@@ -251,7 +254,11 @@ function FAQ() {
   const qa = [
     {
       q: "Does ReproAI run my code?",
-      a: "No. ReproAI is static — it inspects your files, structure, and dependencies, but never executes your analysis. It also never issues a reproducibility verdict; it only advises. The downstream execution-based check is a separate step.",
+      a: "Only when you ask it to. The three core commands — check, comply, and fix — are fully static: they inspect your files, structure, and dependencies and rewrite a copy, but never execute your analysis. The one command that runs your code is the optional debug command, and only as a smoke test (see below).",
+    },
+    {
+      q: "What does the debug command do?",
+      a: "It trial-runs a copy of your package as a smoke test — it confirms the package executes end-to-end and that the table and figure outputs actually get written. It never compares a number to your paper and never issues a 'reproducible' verdict. On a runtime error it does not silently auto-fix: it explains the root cause, offers a few options, and asks you to choose. It only ever runs the copy, never your original.",
     },
     {
       q: "Which venues does it support?",
