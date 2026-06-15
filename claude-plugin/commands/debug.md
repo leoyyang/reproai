@@ -29,6 +29,17 @@ eyeball test against the paper.
 1. **Pick the target copy.** Prefer the `<root>_fixed` produced by `/reproai-fix`. If none exists,
    make one: `cp -r <ROOT> <ROOT>_debug`. Never run the original in place.
 
+1b. **PRECONDITION — run the static hard gate first. If it fails, STOP.**
+
+    ```bash
+    reproai gate <COPY>; echo "gate exit: $?"
+    ```
+
+    `reproai gate` exits nonzero while ANY paper Table/Figure still lacks a valid export under
+    `output/tables` / `output/figures`. **Do not proceed to run the package until it exits 0** —
+    debugging a package that isn't even instrumented to emit its artifacts is pointless. If the gate
+    fails, go back to `/reproai-fix` and finish injecting the missing exports. Paste the gate output.
+
 2. **Determine the run order.** Use the master script if present; else the README's documented order;
    else ask the author for the order (this is exactly the `A11-explicit-run-order` finding). Do not
    guess an order for a multi-script package.
@@ -54,12 +65,20 @@ eyeball test against the paper.
       picks "Other", follow their instruction.
    f. Re-run from the failing script. Repeat from step 4 if it errors again.
 
-5. **When the package runs clean**, verify the injected outputs fired:
-   - Confirm files exist under `output/tables/` and `output/figures/` (the D1 targets).
-   - If an expected output is missing, that is itself a finding → go to step 4 (root cause: the
-     output command didn't fire / wrote elsewhere) and ask the author.
+5. **When the package runs clean, run the runtime HARD GATE (this is the completion authority):**
 
-6. **Hand the author the smoke-test result:**
+   ```bash
+   reproai verify <COPY> --since <RUN_START_EPOCH>; echo "verify exit: $?"
+   ```
+
+   `reproai verify` deterministically checks that EVERY expected Table/Figure output file actually
+   exists, is non-empty, and (with `--since`) was created during this run. It exits nonzero with the
+   `not_produced` list if any expected artifact is missing. **You are not done until `reproai verify`
+   exits 0.** Paste its output. A missing artifact means the output command didn't fire (or wrote
+   elsewhere) → go to step 4 (diagnose, ask the author), fix, re-run, re-verify. Do not declare
+   "tables and figures produced" on your own say-so — `reproai verify` says so, or it isn't true.
+
+6. **Hand the author the smoke-test result** (only after `reproai verify` exits 0):
    - which scripts ran clean,
    - the list of generated tables (paths under `output/tables/`) and figures (`output/figures/`),
    - any fixes applied (and which option the author chose for each),

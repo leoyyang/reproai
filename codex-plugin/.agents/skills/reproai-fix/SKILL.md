@@ -38,7 +38,12 @@ execution of the package.
      (e.g. D1 lists every `Table N` section). The re-check is the checklist enforcer: if a finding
      still fires, you are not done with it.
    - Skip `propose_only` items; collect them for the author summary.
-5. Re-check the copy: `reproai check <ROOT>_fixed --venue <VENUE> --out <ROOT>_fixed/.reproai/reports`.
+5. Re-check, then run the HARD GATE (the real, code-level completion test):
+   `reproai check <ROOT>_fixed --venue <VENUE> --out <ROOT>_fixed/.reproai/reports`
+   then `reproai gate <ROOT>_fixed` — it exits NONZERO while ANY paper Table/Figure lacks a valid
+   export under output/tables / output/figures (a misnamed/mislocated export does NOT count). You
+   are NOT done until `reproai gate` exits 0; paste its output as proof. A transcript that proceeds
+   with a nonzero gate is invalid.
 6. Compare: a finding that disappeared succeeded; one that remains needs revision; a new
    higher-priority finding you introduced → revert that edit (it was not lossless).
 7. Iterate steps 4–6, capped at 3 rounds, until `llm_rewrite` findings clear or only

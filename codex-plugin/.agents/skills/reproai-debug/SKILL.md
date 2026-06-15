@@ -30,6 +30,10 @@ auto-fix errors silently. **Every fix is the author's decision.**
 
 ## Steps
 
+0. PRECONDITION — run the static hard gate; if it fails, STOP and finish `reproai-fix`:
+   `reproai gate <COPY>; echo "gate exit: $?"`. It exits nonzero while any Table/Figure lacks a
+   valid output export. Do not run the package until it exits 0.
+
 1. Pick the target copy (`<root>_fixed`, else `cp -r <ROOT> <ROOT>_debug`).
 2. Determine run order: master script → README order → else ask the author. Do not guess a
    multi-script order.
@@ -60,13 +64,16 @@ auto-fix errors silently. **Every fix is the author's decision.**
         author re-run with their choice. Do not block waiting for input.
    e. Apply ONLY the chosen option, to the copy. Re-run from the failing script. Repeat step 4
       if it errors again.
-5. When the package runs clean, verify the injected outputs fired: confirm files under
-   `output/tables/` and `output/figures/`. A missing expected output is itself a finding → go to
-   step 4 (root cause: the output command didn't fire / wrote elsewhere).
-6. Hand the author: which scripts ran clean, the generated tables/figures (paths), the fixes
-   applied (and which option they chose), and an explicit note: "This is a smoke test — the code
-   runs and emits its artifacts. It is NOT a reproducibility verdict; eyeball the tables/figures
-   against the paper."
+5. When the package runs clean, run the runtime HARD GATE (completion authority):
+   `reproai verify <COPY> --since <RUN_START_EPOCH>; echo "verify exit: $?"`. It checks every
+   expected Table/Figure output file exists, is non-empty, and is fresh; exits nonzero with the
+   `not_produced` list otherwise. You are NOT done until it exits 0 — paste its output. A missing
+   artifact → step 4 (diagnose, ask author), fix, re-run, re-verify. Do not declare "tables and
+   figures produced" yourself; `reproai verify` says so, or it isn't true.
+6. Hand the author (only after `reproai verify` exits 0): which scripts ran clean, the generated
+   tables/figures (paths), the fixes applied (and which option they chose), and: "This is a smoke
+   test — the code runs and emits its artifacts. NOT a reproducibility verdict; eyeball against the
+   paper."
 
 ## Hard rules
 

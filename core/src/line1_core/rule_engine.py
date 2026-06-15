@@ -20,7 +20,7 @@ _TS_OP = re.compile(r'(?<![\w.])([LDF]\d*\.\w+)')
 _TSSET = re.compile(r'^\s*(tsset|xtset)\b', re.IGNORECASE | re.MULTILINE)
 # Allow common Stata prefixes before the estimator: `xi:`, `by/bysort ... :`, `quietly`,
 # `capture`, `noisily`, `svy:` — otherwise `xi: reg ...` / `bysort y: reg ...` are missed.
-_STATA_PREFIX = r'(?:(?:cap(?:ture)?|qui(?:etly)?|noi(?:sily)?|xi|svy|by(?:sort)?\s+[^\r\n:]+)[\s:]+)*'
+_STATA_PREFIX = r'(?:(?:cap(?:ture)?|qui(?:etly)?|noi(?:sily)?|xi|svy|eststo(?:\s+\w+)?|est(?:imates)?\s+sto(?:re)?(?:\s+\w+)?|estpost|by(?:sort)?\s+[^\r\n:]+)[\s:]+)*'
 _ESTIMATION = re.compile(r'^\s*' + _STATA_PREFIX + r'(reg|regress|areg|xtreg|reghdfe|ivreg\w*|ivregress|logit|probit|tobit|glm|xtivreg\w*|melogit|mlogit)\b', re.IGNORECASE | re.MULTILINE)
 # R estimators are almost always ASSIGNED (m <- lm(...), fit = ivreg(...)) so the verb is not at
 # line start; match an optional `name <-`/`name =` then a known R estimator call.

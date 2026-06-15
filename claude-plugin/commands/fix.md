@@ -97,11 +97,20 @@ You never decide reproducibility and never execute the author's analysis code. R
    you must continue until the count reaches zero. Treat "the finding still fires" as "I am not done
    with this finding," never as "good enough."
 
-5. **Re-check the copy (this is the convergence gate):**
+5. **Re-check the copy, then run the HARD GATE (this is the real, code-level completion test):**
 
    ```bash
    reproai check <ROOT>_fixed --venue <VENUE> --out <ROOT>_fixed/.reproai/reports
+   reproai gate <ROOT>_fixed        # <-- exits NONZERO while ANY Table/Figure lacks a valid export
+   echo "gate exit: $?"
    ```
+
+   **`reproai gate` is the authority, not your judgment.** It lists every paper Table N / Figure N
+   and exits 0 only when each has an export under `output/tables` / `output/figures`. A misnamed or
+   mislocated export does NOT satisfy it. You are **not done** with fix until `reproai gate` exits 0.
+   You MUST paste the `reproai gate` output (showing it exits 0) as the proof of completion — a
+   transcript that proceeds with a nonzero gate is invalid. Do not hand-wave "I fixed the tables";
+   show the gate passing.
 
 6. **Compare new advisory vs old.**
    - A finding that **disappeared** → that rewrite succeeded.

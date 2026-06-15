@@ -8,6 +8,7 @@ from pathlib import Path
 from . import __version__, coordinator, inventory
 from . import fix_applier
 from . import fix_planner
+from . import gate as gate_mod
 
 _REPORT_FILES = {
     "architecture_report": "architecture_report.json",
@@ -103,6 +104,43 @@ def _cmd_fix(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_gate(args: argparse.Namespace) -> int:
+    root = Path(args.path).resolve()
+    if not root.is_dir():
+        print(f"error: not a directory: {root}", file=sys.stderr)
+        return 2
+    code, report = gate_mod.gate_static(root)
+    if args.json:
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+    else:
+        print(f"reproai gate (static) — {root}")
+        print(f"  expected artifacts: {report['expected_total']}  "
+              f"with valid export: {report['with_export']}  missing: {len(report['missing_export'])}")
+        for a in report["missing_export"]:
+            print(f"  MISSING EXPORT  {a['artifact_id']:12s} [{a['kind']}]  {a['source_file']}:{a['header_line']}")
+        print(f"  GATE {'PASS' if report['passed'] else 'FAIL'} (exit {code})")
+    return code
+
+
+def _cmd_verify(args: argparse.Namespace) -> int:
+    root = Path(args.path).resolve()
+    if not root.is_dir():
+        print(f"error: not a directory: {root}", file=sys.stderr)
+        return 2
+    code, report = gate_mod.verify_runtime(root, since_epoch=args.since)
+    if args.json:
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+    else:
+        print(f"reproai verify (runtime artifacts) — {root}")
+        print(f"  expected: {report['expected_total']}  produced: {report['produced']}  "
+              f"not produced: {len(report['not_produced'])}")
+        for r in report["not_produced"]:
+            print(f"  NOT PRODUCED  {r['artifact_id']:12s} [{r['kind']}]  {r['source_file']}"
+                  f"  (valid_export={r['has_valid_export']})")
+        print(f"  VERIFY {'PASS' if report['passed'] else 'FAIL'} (exit {code})")
+    return code
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="reproai",
@@ -124,6 +162,17 @@ def build_parser() -> argparse.ArgumentParser:
     fix.add_argument("--apply", action="store_true", help="Write fixes to a copy (requires --out). Without this, dry-run.")
     fix.add_argument("--out", default=None, help="Destination directory for the fixed copy (must not exist).")
     fix.set_defaults(func=_cmd_fix)
+
+    gate = sub.add_parser("gate", help="HARD GATE: exit nonzero while any paper Table/Figure lacks a valid output export. The fix loop is done only when this exits 0.")
+    gate.add_argument("path", help="Path to the (fixed copy of the) replication package.")
+    gate.add_argument("--json", action="store_true", help="Print the full gate report as JSON.")
+    gate.set_defaults(func=_cmd_gate)
+
+    verify = sub.add_parser("verify", help="HARD GATE: after running the package, exit nonzero unless every expected Table/Figure output file actually exists, is non-empty (and fresh with --since).")
+    verify.add_argument("path", help="Path to the (run) fixed copy of the replication package.")
+    verify.add_argument("--since", type=float, default=None, help="Epoch seconds; require artifacts modified at/after this time (run freshness).")
+    verify.add_argument("--json", action="store_true", help="Print the full verify report as JSON.")
+    verify.set_defaults(func=_cmd_verify)
     return parser
 
 
