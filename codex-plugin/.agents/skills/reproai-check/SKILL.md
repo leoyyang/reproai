@@ -32,6 +32,13 @@ never execute the author's code.
      and each with a `rewrite.fix_prompt`
    - `venue_compliance_report.json` — per-requirement pass/fail vs the venue
    - `risk_register.json` — what would likely break a downstream reproducibility run
+   Also read the `adversarial_review` block (the engine's deterministic cross-check): surface any
+   `conflicts` and risk-tier over-reach as-is; do not pick a side or override them.
+
+3b. Environment reproducibility note. From the dependency findings (`C1` unpinned, `C2` unvendored
+   user commands, `C3` missing version), tell the author what a pinned environment needs — and if
+   asked, draft a `renv.lock` / `requirements.txt` / Stata `version` + ado manifest to review.
+   Explicit proposals to confirm; never silently chosen; nothing installed or run.
 
 4. Summarize by **priority** (the engine assigns P0–P4; do NOT change priority or kind):
    P0 blocks reproduction · P1 large downstream cost · P2 moderate misread risk · P3 minor ·

@@ -31,6 +31,16 @@ never execute the author's code.
    - `advisory_plan.json` — remediation items (each `low`=auto-applicable / `high`=propose-only)
    - `venue_compliance_report.json` — per-requirement pass/fail vs the venue
    - `risk_register.json` — what would likely break a downstream reproducibility run
+   Also read the result's **`adversarial_review` block** (the engine's deterministic cross-check):
+   surface any `conflicts` (where the rule line and the venue/compliance line point in opposite
+   directions) and any risk-tier over-reach it flags. Present them as-is; do not pick a side or
+   override them — the engine computed them, you only make them impossible to miss.
+
+3b. **Environment reproducibility note.** From the dependency findings (`C1` unpinned deps, `C2`
+   unvendored user commands, `C3` missing version declaration), tell the author what a pinned,
+   reproducible environment needs — and, if asked, draft a `renv.lock` / `requirements.txt` /
+   Stata `version` + ado manifest for them to review. These are explicit proposals to confirm,
+   never silently chosen versions, and nothing is installed or run.
 
 4. Summarize for the author by **priority** (the engine assigns each item P0–P4 by its downstream
    reproducibility cost — you MUST NOT change the assigned priority or kind):

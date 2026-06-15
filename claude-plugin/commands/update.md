@@ -30,7 +30,7 @@ version. To update:
 /plugin update reproai                      # install the latest reproai (new rules included)
 ```
 
-Then `/reload-plugins` (or restart) so the new rules and agents load.
+Then `/reload-plugins` (or restart) so the new rules load.
 
 ## How new rules get in (for maintainers)
 
