@@ -18,7 +18,10 @@ _LOOP_HEAD = re.compile(r'^\s*(foreach|forvalues|forv|while|for)\b', re.IGNORECA
 _EXPORT_FIXED = re.compile(r'\b(esttab|estout|outreg2?|putexcel|tabout)\b[^\r\n]*using\s+["\']?([^\s"\'`,]+)', re.IGNORECASE)
 _TS_OP = re.compile(r'(?<![\w.])([LDF]\d*\.\w+)')
 _TSSET = re.compile(r'^\s*(tsset|xtset)\b', re.IGNORECASE | re.MULTILINE)
-_ESTIMATION = re.compile(r'^\s*(reg|regress|areg|xtreg|reghdfe|ivreg\w*|ivregress|logit|probit|tobit|glm|xtivreg\w*|melogit|mlogit)\b', re.IGNORECASE | re.MULTILINE)
+# Allow common Stata prefixes before the estimator: `xi:`, `by/bysort ... :`, `quietly`,
+# `capture`, `noisily`, `svy:` — otherwise `xi: reg ...` / `bysort y: reg ...` are missed.
+_STATA_PREFIX = r'(?:(?:cap(?:ture)?|qui(?:etly)?|noi(?:sily)?|xi|svy|by(?:sort)?\s+[^\r\n:]+)[\s:]+)*'
+_ESTIMATION = re.compile(r'^\s*' + _STATA_PREFIX + r'(reg|regress|areg|xtreg|reghdfe|ivreg\w*|ivregress|logit|probit|tobit|glm|xtivreg\w*|melogit|mlogit)\b', re.IGNORECASE | re.MULTILINE)
 # R estimators are almost always ASSIGNED (m <- lm(...), fit = ivreg(...)) so the verb is not at
 # line start; match an optional `name <-`/`name =` then a known R estimator call.
 _R_ESTIMATION = re.compile(r'(?:^|<-|=|\(|\s)\s*(lm|glm|lm_robust|iv_robust|ivreg|ivreg2|felm|feols|feglm|plm|lmer|glmer|polr|multinom|gam|coxph|survreg|rdrobust|rdd_reg)\s*\(', re.IGNORECASE)

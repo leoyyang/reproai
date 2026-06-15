@@ -115,6 +115,20 @@ def test_r_assigned_estimations_are_detected(tmp_path: Path) -> None:
     assert "D1-output-artifact-coverage" in fired, fired
 
 
+def test_stata_prefixed_estimations_are_detected(tmp_path: Path) -> None:
+    pkg = tmp_path / "prefixed"
+    pkg.mkdir()
+    (pkg / "t.do").write_text(
+        "use d.dta, clear\n"
+        "* Table 1\nxi: reg y x i.decade, cluster(id)\n"
+        "* Table 2\nxi: ivregress 2sls y (x = z) i.decade, cluster(id)\n",
+        encoding="utf-8",
+    )
+    fired = _rules_fired(pkg)
+    assert "D1-output-artifact-coverage" in fired, fired
+    assert "A12-table-comment-mapping" not in fired, "Table comments present → A12 should NOT fire"
+
+
 def test_d4_fires_when_files_undocumented(tmp_path: Path) -> None:
     pkg = tmp_path / "undoc"
     pkg.mkdir()
