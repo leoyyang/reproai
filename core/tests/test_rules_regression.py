@@ -129,6 +129,21 @@ def test_stata_prefixed_estimations_are_detected(tmp_path: Path) -> None:
     assert "A12-table-comment-mapping" not in fired, "Table comments present → A12 should NOT fire"
 
 
+def test_r_function_library_not_treated_as_analysis(tmp_path: Path) -> None:
+    pkg = tmp_path / "lib"
+    pkg.mkdir()
+    # a pure helper library: estimations only INSIDE function bodies, no top-level analysis
+    (pkg / "utils.R").write_text(
+        "my_fit <- function(d) {\n  m <- lm(y ~ x, data = d)\n  return(coef(m))\n}\n"
+        "my_plot <- function(d) {\n  plot(d$x, d$y)\n}\n",
+        encoding="utf-8",
+    )
+    fired = _rules_fired(pkg)
+    assert "A3-data-load" not in fired, "function library should not need a data load"
+    assert "D1-output-artifact-coverage" not in fired, "function library defines, doesn't build tables/figures"
+    assert "A12-table-comment-mapping" not in fired, "function library is not a table-building script"
+
+
 def test_d4_fires_when_files_undocumented(tmp_path: Path) -> None:
     pkg = tmp_path / "undoc"
     pkg.mkdir()

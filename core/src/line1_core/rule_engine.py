@@ -431,8 +431,40 @@ def _is_estimation(line: str) -> bool:
     return bool(_ESTIMATION.match(line) or _R_ESTIMATION.search(line))
 
 
-def _has_estimation(text: str) -> bool:
-    return bool(_ESTIMATION.search(text)) or any(_R_ESTIMATION.search(ln) for ln in text.splitlines())
+def _toplevel_estimation_lines(text: str) -> list[int]:
+    """1-based line numbers of estimations NOT inside an R function body or a Stata program.
+    A pure helper library (only functions defining estimations) is not an analysis script."""
+    out: list[int] = []
+    brace_depth = 0
+    in_stata_program = False
+    for i, line in enumerate(text.splitlines(), start=1):
+        if _PROGRAM_DEF.match(line):
+            in_stata_program = True
+        elif in_stata_program and re.match(r'^\s*end\b', line):
+            in_stata_program = False
+        if not in_stata_program and brace_depth == 0 and _is_estimation(line):
+            out.append(i)
+        masked = _mask_r_strings_comments(line)
+        brace_depth += masked.count("{") - masked.count("}")
+        if brace_depth < 0:
+            brace_depth = 0
+    return out
+
+
+def _has_toplevel_estimation(text: str) -> bool:
+    return len(_toplevel_estimation_lines(text)) > 0
+
+
+def _toplevel_graph_line(text: str) -> int | None:
+    brace_depth = 0
+    for i, line in enumerate(text.splitlines(), start=1):
+        if brace_depth == 0 and _GRAPH_CMD.search(line):
+            return i
+        masked = _mask_r_strings_comments(line)
+        brace_depth += masked.count("{") - masked.count("}")
+        if brace_depth < 0:
+            brace_depth = 0
+    return None
 
 
 def _section_spans(lines: list[str], header_re: re.Pattern[str]) -> list[tuple[str, int, int]]:
@@ -458,10 +490,10 @@ def _detect_uncaptured_artifacts(path: str, text: str) -> list[dict[str, Any]]:
             if has_est and not has_exp:
                 hits.append(_ev(path, start + 1, f"{label}: estimations build this table but no export saves it to output/tables/"))
     else:
-        first = next((i for i, ln in enumerate(lines) if _is_estimation(ln)), None)
+        toplevel = _toplevel_estimation_lines(text)
         has_exp = any(_TABLE_EXPORT.search(_mask_r_strings_comments(ln)) for ln in lines)
-        if first is not None and not has_exp:
-            hits.append(_ev(path, first + 1, "estimations build a table but no export saves coefficients to output/tables/"))
+        if toplevel and not has_exp:
+            hits.append(_ev(path, toplevel[0], "estimations build a table but no export saves coefficients to output/tables/"))
 
     figure_spans = _section_spans(lines, _FIGURE_HEADER)
     if figure_spans:
@@ -472,19 +504,16 @@ def _detect_uncaptured_artifacts(path: str, text: str) -> list[dict[str, Any]]:
             if has_graph and not has_exp:
                 hits.append(_ev(path, start + 1, f"{label}: figure produced but no graph-export saves it to output/figures/"))
     else:
-        has_graph = any(_GRAPH_CMD.search(ln) for ln in lines)
+        gline = _toplevel_graph_line(text)
         has_exp = any(_GRAPH_EXPORT.search(ln) for ln in lines)
-        if has_graph and not has_exp:
-            for i, ln in enumerate(lines, start=1):
-                if _GRAPH_CMD.search(ln):
-                    hits.append(_ev(path, i, "figure produced but no graph-export saves it to output/figures/"))
-                    break
+        if gline is not None and not has_exp:
+            hits.append(_ev(path, gline, "figure produced but no graph-export saves it to output/figures/"))
     return hits
 
 
 def _detect_missing_table_comments(path: str, text: str) -> list[dict[str, Any]]:
     lines = text.splitlines()
-    est_lines = [i + 1 for i, ln in enumerate(lines) if _is_estimation(ln)]
+    est_lines = _toplevel_estimation_lines(text)
     if len(est_lines) < 2:
         return []
     has_table_comment = any(_TABLE_HEADER.search(ln) or _FIGURE_HEADER.search(ln) for ln in lines)
@@ -641,7 +670,7 @@ def run(root: Path, entries: list[FileEntry], edges: list[Edge], table_exports) 
                  "Commented-out regression with nearby restricted-data wording.")
 
         if lang == "r":
-            if _has_estimation(text) and not _DATA_LOAD_R.search(text):
+            if _has_toplevel_estimation(text) and not _DATA_LOAD_R.search(text):
                 if not _upstream_loads_data(path, edges, texts, _DATA_LOAD_R):
                     emit("A3-data-load", [_ev(path)],
                          "Estimation present but no read/load in this script, and no upstream script loads data first.")
