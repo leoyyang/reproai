@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 
 const GH = "https://github.com/leoyyang/reproai";
 
@@ -19,44 +20,71 @@ function Nav() {
   );
 }
 
+const STAGES = [
+  { name: "Architect", note: "Recovers workflow, maps tables, flags orphans" },
+  { name: "Provisioner", note: "Pins the environment, vendors dependencies" },
+  { name: "Complier", note: "Checks the target-venue standard" },
+  { name: "Reviewer", note: "Cross-checks findings (deterministic)" },
+];
+
 function EnginePanel() {
-  const stages = [
-    { name: "Architect", note: "Recovers workflow, maps tables, flags orphans" },
-    { name: "Provisioner", note: "Pins the environment, vendors dependencies" },
-    { name: "Complier", note: "Checks the target-venue standard" },
-    { name: "Reviewer", note: "Cross-checks findings (deterministic)" },
-  ];
+  const [active, setActive] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setActive((a) => (a + 1) % STAGES.length), 1100);
+    return () => clearInterval(id);
+  }, []);
+
+  const container = {
+    hidden: { opacity: 0, y: 24 },
+    show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut", staggerChildren: 0.08, delayChildren: 0.15 } },
+  };
+  const item = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0, transition: { duration: 0.4 } } };
+
   return (
-    <div className="engine">
+    <motion.div
+      className="engine"
+      variants={container}
+      initial="hidden"
+      whileInView="show"
+      viewport={{ once: true, amount: 0.3 }}
+    >
+      <span className="glow glow-a" aria-hidden="true" />
+      <span className="glow glow-b" aria-hidden="true" />
+
       <div className="engine-head">
-        <span className="dot" /> ReproAI engine · static, no execution
+        <div className="lights"><i className="l r" /><i className="l y" /><i className="l g" /></div>
+        <span className="engine-title">ReproAI engine · static, no execution</span>
       </div>
-      <div className="engine-body">
-        <div className="engine-block input">
+
+      <motion.div className="engine-body" variants={container}>
+        <motion.div className="engine-block input" variants={item}>
           <div className="block-label">Input</div>
           <div className="block-text">A messy working directory + the draft paper</div>
-        </div>
-        <div className="engine-stages">
-          {stages.map((s) => (
-            <div className="stage" key={s.name}>
+        </motion.div>
+
+        <motion.div className="engine-stages" variants={item}>
+          {STAGES.map((s, i) => (
+            <div className={`stage ${active === i ? "on" : ""}`} key={s.name}>
               <span className="stage-tick" />
-              <div>
+              <div className="stage-text">
                 <div className="stage-name">{s.name}</div>
                 <div className="stage-note">{s.note}</div>
               </div>
+              {active === i && <span className="stage-run">working…</span>}
             </div>
           ))}
-        </div>
-        <div className="engine-block output">
+        </motion.div>
+
+        <motion.div className="engine-block output" variants={item}>
           <div className="block-label">Output · priority-graded advisory</div>
           <ul className="advisory">
             <li><span className="pill p0">P0</span> Guarded fallback loads the wrong dataset</li>
             <li><span className="pill p1">P1</span> Declare the software version</li>
             <li><span className="pill p3">P3</span> Group commands by the table they build</li>
           </ul>
-        </div>
-      </div>
-    </div>
+        </motion.div>
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -89,7 +117,45 @@ function Hero() {
   );
 }
 
+function Term({ lines }) {
+  return (
+    <div className="term">
+      {lines.map((line, i) => (
+        <div className="term-line" key={i}>
+          {line.length === 0 ? "\u00a0" : line.map((tok, j) => (
+            <span key={j} className={`tk ${tok.c || ""}`}>{tok.t}</span>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const P = (t) => ({ t, c: "prompt" });
+const CMD = (t) => ({ t, c: "cmd" });
+const SLASH = (t) => ({ t, c: "slash" });
+const FLAG = (t) => ({ t, c: "flag" });
+const OUT = (t) => ({ t, c: "out" });
+const TXT = (t) => ({ t });
+
 function Install() {
+  const installLines = [
+    [P("$ "), CMD("cd"), TXT(" ~/my-replication-package")],
+    [P("$ "), CMD("claude")],
+    [],
+    [P("❯ "), SLASH("/plugin marketplace add"), TXT(" leoyyang/reproai")],
+    [OUT("✓ Added marketplace: reproai")],
+    [],
+    [P("❯ "), SLASH("/plugin install"), TXT(" reproai@reproai "), FLAG("--scope project")],
+    [OUT("✓ Installed reproai — ready to use")],
+  ];
+  const runLines = [
+    [P("❯ "), SLASH("/reproai-check"), TXT(" . "), FLAG("--venue aea")],
+    [OUT("  advisory: P0=1 P1=1 P3=2")],
+    [OUT("  venue (aea): 2 pass / 2 fail / 5 action")],
+    [P("❯ "), SLASH("/reproai-fix"), TXT(" . "), OUT("# dry-run, copy only")],
+    [P("❯ "), SLASH("/reproai-comply"), TXT(" "), FLAG("--venue ajps")],
+  ];
   return (
     <section id="install" className="section">
       <SectionHead lead="Install" emphasis="ReproAI" sub="It ships as a plugin. Add the marketplace, install, and run it in your package project." />
@@ -98,26 +164,13 @@ function Install() {
           <span className="redline" />
           <h3>Install as a plugin</h3>
           <p>Activate ReproAI in your package project. Use <code>--scope project</code> to keep it scoped to this package.</p>
-          <pre className="term">
-{`$ cd ~/my-replication-package
-$ claude
-❯ /plugin marketplace add leoyyang/reproai
-✓ Added marketplace: reproai
-❯ /plugin install reproai@reproai --scope project
-✓ Installed reproai — ready to use`}
-          </pre>
+          <Term lines={installLines} />
         </div>
         <div className="card">
           <span className="redline" />
           <h3>Run the pre-diagnose</h3>
           <p>Point it at your package. It writes a priority-graded advisory, a venue-compliance report, and a risk register — and applies only safe fixes to a copy.</p>
-          <pre className="term">
-{`❯ /reproai-check . --venue aea
-  advisory: P0=1 P1=1 P3=2
-  venue (aea): 2 pass / 2 fail / 5 action
-❯ /reproai-fix .            # dry-run, copy only
-❯ /reproai-comply --venue ajps`}
-          </pre>
+          <Term lines={runLines} />
         </div>
       </div>
     </section>
