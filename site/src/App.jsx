@@ -311,18 +311,20 @@ function FAQ() {
 }
 
 function Cite() {
-  const bib = `@article{reproai2026,
-  title   = {ReproAI: Author-Facing Pre-Diagnose for Replication Packages},
-  author  = {ReproAI},
+  const bib = `@article{xu2026scaling,
+  title   = {Scaling Reproducibility: An AI-Assisted Workflow for Large-Scale Replication and Reanalysis},
+  author  = {Xu, Yiqing and Yang, Leo Yang},
   year    = {2026},
-  note    = {https://github.com/leoyyang/reproai}
+  journal = {arXiv preprint arXiv:2602.16733},
+  url     = {https://arxiv.org/abs/2602.16733}
 }`;
   const bibLines = [
-    [AT("@article"), PUN("{"), KEY("reproai2026"), PUN(",")],
-    [TXT("  "), FLD("title"), TXT("   "), PUN("= {"), VAL("ReproAI: Author-Facing Pre-Diagnose for Replication Packages"), PUN("},")],
-    [TXT("  "), FLD("author"), TXT("  "), PUN("= {"), VAL("ReproAI"), PUN("},")],
+    [AT("@article"), PUN("{"), KEY("xu2026scaling"), PUN(",")],
+    [TXT("  "), FLD("title"), TXT("   "), PUN("= {"), VAL("Scaling Reproducibility: An AI-Assisted Workflow for Large-Scale Replication and Reanalysis"), PUN("},")],
+    [TXT("  "), FLD("author"), TXT("  "), PUN("= {"), VAL("Xu, Yiqing and Yang, Leo Yang"), PUN("},")],
     [TXT("  "), FLD("year"), TXT("    "), PUN("= {"), VAL("2026"), PUN("},")],
-    [TXT("  "), FLD("note"), TXT("    "), PUN("= {"), VAL("https://github.com/leoyyang/reproai"), PUN("}")],
+    [TXT("  "), FLD("journal"), TXT(" "), PUN("= {"), VAL("arXiv preprint arXiv:2602.16733"), PUN("},")],
+    [TXT("  "), FLD("url"), TXT("     "), PUN("= {"), VAL("https://arxiv.org/abs/2602.16733"), PUN("}")],
     [PUN("}")],
   ];
   const [copied, setCopied] = useState(false);
@@ -339,9 +341,9 @@ function Cite() {
         <div className="card">
           <span className="redline" />
           <div className="cite-label">Reference</div>
-          <h3 className="cite-title">ReproAI: Author-Facing Pre-Diagnose for Replication Packages</h3>
-          <p className="cite-meta">reproAI project · 2026</p>
-          <a className="link" href={GH}>github.com/leoyyang/reproai →</a>
+          <h3 className="cite-title">Scaling Reproducibility: An AI-Assisted Workflow for Large-Scale Replication and Reanalysis</h3>
+          <p className="cite-meta">Yiqing Xu &amp; Leo Yang Yang · arXiv:2602.16733 · 2026</p>
+          <a className="link" href="https://arxiv.org/abs/2602.16733">arxiv.org/abs/2602.16733 →</a>
         </div>
         <div className="card">
           <span className="redline" />
