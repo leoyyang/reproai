@@ -6,9 +6,10 @@
  *   ships it. App.jsx only handles layout + animation — it reads every word of visible text
  *   from this file, so editing here is all you need. No sync step, nothing can drift.
  *
- * TWO SYNTAX-HIGHLIGHTED BLOCKS are token lists rather than plain sentences:
- *   - install.installLines / install.runLines  → the two terminal demos
- *   - cite.bibLines                              → the BibTeX block
+ * SYNTAX-HIGHLIGHTED BLOCKS are token lists rather than plain sentences:
+ *   - install.claude.lines / install.codex.lines  → the two install terminals
+ *   - usage.runLines                               → the usage terminal demo
+ *   - cite.bibLines                                → the BibTeX block
  *   To edit them, change the text inside each token's  t: "..."  . The wrapper
  *   (P, CMD, SLASH, FLAG, OUT, TXT / AT, KEY, FLD, VAL, PUN) only sets the highlight color.
  *   The "Copy" button copies text derived from bibLines automatically — nothing to keep in sync.
@@ -40,7 +41,7 @@ export const content = {
 
   nav: {
     // each label also doubles as its scroll-anchor (lowercased must match a section id below)
-    links: ["Overview", "Install", "Examples", "FAQ", "Cite"],
+    links: ["Overview", "Install", "Usage", "Examples", "FAQ", "Cite"],
   },
 
   hero: {
@@ -61,9 +62,9 @@ export const content = {
     inputText: "A messy working directory + the draft paper",
     stages: [
       { name: "/reproai:check", note: "Static pre-diagnose — scans, applies rules + venue, writes the advisory" },
-      { name: "/reproai:comply", note: "Venue compliance checklist (AEA, APSR, AJPS, JOP…)" },
+      { name: "/reproai:comply", note: "Venue compliance checklist (AER, APSR, AJPS…)" },
       { name: "/reproai:fix", note: "Rewrites the recommended fixes to a copy, re-checks" },
-      { name: "/reproai:debug", note: "Smoke-tests the copy — does it run? tables + figures emitted?", runs: true },
+      { name: "/reproai:debug", note: "Smoke-tests: does it run? tables/figures emitted?", runs: true },
     ],
     outputLabel: "Output · priority-graded advisory",
     advisory: [
@@ -81,26 +82,45 @@ export const content = {
     head: {
       lead: "Install",
       emphasis: "ReproAI",
-      sub: "ReproAI ships as a plugin. Install it once on your machine, then use it across projects.",
+      sub: "ReproAI ships as a plugin for Claude Code and OpenAI Codex. Install it once on your machine — it's then available in every project.",
     },
-    card1: {
-      title: "Install as a plugin",
-      body: "Activate ReproAI from the folder that contains your project or replication package. Use `--scope project` to keep the plugin scoped to that package, or ask your AI assistant to scope it to the project.",
+    claude: {
+      title: "Claude Code",
+      lines: [
+        [P("$ "), CMD("claude"), TXT("  "), OUT("# from any folder")],
+        [],
+        [P("❯ "), SLASH("/plugin marketplace add"), TXT(" leoyyang/reproai")],
+        [OUT("✓ Added marketplace: reproai")],
+        [],
+        [P("❯ "), SLASH("/plugin install"), TXT(" reproai@reproai")],
+        [OUT("✓ Installed reproai — ready to use")],
+      ],
+      note: "Installs globally, so it's available in every project — launch `claude` from any folder; you don't need to `cd` into your package first.",
     },
-    card2: {
+    codex: {
+      title: "OpenAI Codex",
+      lines: [
+        [P("$ "), CMD("git clone"), TXT(" https://github.com/leoyyang/reproai")],
+        [P("$ "), CMD("cd"), TXT(" reproai")],
+        [P("$ "), CMD("./codex-plugin/install.sh")],
+        [OUT("✓ linked 5 skills → ~/.agents/skills")],
+        [P("$ "), CMD("pip install -e core"), TXT("  "), OUT("# reproai CLI on PATH")],
+      ],
+      note: "Links the reproai skills into Codex and puts the engine on PATH. Then ask Codex for `/reproai-check` in any project.",
+    },
+  },
+
+  usage: {
+    head: {
+      lead: "How to",
+      emphasis: "use",
+      sub: "Once installed, point ReproAI at your replication package. The static commands diagnose and rewrite a copy; the optional smoke test runs it.",
+    },
+    card: {
       title: "Pre-diagnose, fix, smoke-test",
       body: "`check`, `comply`, and `fix` are static commands: none of them runs your code; `fix` rewrites the recommended changes to a copy. The optional `debug` step then runs that copy as a smoke test: does it execute end to end and produce its tables and figures? Every runtime fix remains your call.",
     },
-    installLines: [
-      [P("$ "), CMD("cd"), TXT(" ~/my-replication-package")],
-      [P("$ "), CMD("claude")],
-      [],
-      [P("❯ "), SLASH("/plugin marketplace add"), TXT(" leoyyang/reproai")],
-      [OUT("✓ Added marketplace: reproai")],
-      [],
-      [P("❯ "), SLASH("/plugin install"), TXT(" reproai@reproai "), FLAG("--scope project")],
-      [OUT("✓ Installed reproai — ready to use")],
-    ],
+    demoTitle: "A typical run",
     runLines: [
       [P("❯ "), SLASH("/reproai:check"), TXT(" . "), FLAG("--venue aea")],
       [OUT("  advisory: P0=1 P1=1 P3=2")],

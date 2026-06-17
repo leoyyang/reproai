@@ -159,14 +159,35 @@ function Install() {
       <div className="cards two">
         <div className="card">
           <span className="redline" />
-          <h3>{c.card1.title}</h3>
-          <p>{withCode(c.card1.body)}</p>
-          <Term lines={c.installLines} />
+          <h3>{c.claude.title}</h3>
+          <Term lines={c.claude.lines} />
+          <p className="term-note">{withCode(c.claude.note)}</p>
         </div>
         <div className="card">
           <span className="redline" />
-          <h3>{c.card2.title}</h3>
-          <p>{withCode(c.card2.body)}</p>
+          <h3>{c.codex.title}</h3>
+          <Term lines={c.codex.lines} />
+          <p className="term-note">{withCode(c.codex.note)}</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Usage() {
+  const c = content.usage;
+  return (
+    <section id="usage" className="section">
+      <SectionHead lead={c.head.lead} emphasis={c.head.emphasis} sub={c.head.sub} />
+      <div className="cards two">
+        <div className="card">
+          <span className="redline" />
+          <h3>{c.card.title}</h3>
+          <p>{withCode(c.card.body)}</p>
+        </div>
+        <div className="card">
+          <span className="redline" />
+          <h3>{c.demoTitle}</h3>
           <Term lines={c.runLines} />
         </div>
       </div>
@@ -239,21 +260,20 @@ function Cite() {
   return (
     <section id="cite" className="section">
       <SectionHead lead={c.head.lead} emphasis={c.head.emphasis} sub={c.head.sub} />
-      <div className="cards two">
+      <div className="cards">
         <div className="card">
           <span className="redline" />
           <div className="cite-label">{c.referenceLabel}</div>
           <h3 className="cite-title">{c.title}</h3>
           <p className="cite-meta">{c.meta}</p>
           <a className="link" href={c.linkUrl}>{c.linkText}</a>
-        </div>
-        <div className="card">
-          <span className="redline" />
-          <div className="cite-label-row">
-            <div className="cite-label">{c.bibtexLabel}</div>
-            <button className="copy" onClick={copy}>{copied ? c.copyDone : c.copyIdle}</button>
+          <div className="cite-bibtex">
+            <div className="cite-label-row">
+              <div className="cite-label">{c.bibtexLabel}</div>
+              <button className="copy" onClick={copy}>{copied ? c.copyDone : c.copyIdle}</button>
+            </div>
+            <Bib lines={c.bibLines} />
           </div>
-          <Bib lines={c.bibLines} />
         </div>
       </div>
     </section>
@@ -286,6 +306,7 @@ export default function App() {
       <Nav />
       <Hero />
       <Install />
+      <Usage />
       <Examples />
       <FAQ />
       <Cite />
