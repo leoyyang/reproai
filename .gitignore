@@ -14,3 +14,7 @@ public/
 rules-seedbank/candidates.json
 # Build caches
 **/__pycache__/
+
+# R session artifacts (stray; not part of the JS/Python sources)
+.Rhistory
+.RData

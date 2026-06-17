@@ -12,7 +12,7 @@ never execute the author's code.
 ## Steps
 
 1. Determine the package root (default: current directory) and the target venue (ask the author
-   if unknown; `aea` is the only profile shipped in M1).
+   if unknown). Shipped venue profiles: `aea`, `econsoc`, `apsr`, `ajps`, `jop`, plus `generic_dataverse` and `generic_openicpsr` fallbacks.
 
 2. Run the core engine:
 

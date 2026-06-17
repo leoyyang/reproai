@@ -9,7 +9,7 @@ Run the engine and present only the venue-compliance line.
 
 ## Steps
 
-1. Confirm the package root and target venue (`aea` shipped).
+1. Confirm the package root and target venue (`aea`, `econsoc`, `apsr`, `ajps`, `jop`, plus `generic_dataverse` / `generic_openicpsr` fallbacks).
 
 2. Run (use the bundled core form if `reproai` is not on PATH —
    `PYTHONPATH="${REPROAI_CODEX_ROOT}/core/src" python3 -m line1_core.cli check ...`):

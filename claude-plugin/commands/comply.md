@@ -9,7 +9,7 @@ Run only the venue-compliance line of the deterministic engine.
 
 ## Steps
 
-1. Confirm the package root and target venue (`aea` shipped in M1).
+1. Confirm the package root and target venue (`aea`, `econsoc`, `apsr`, `ajps`, `jop`, plus `generic_dataverse` / `generic_openicpsr` fallbacks).
 
 2. Run:
 
