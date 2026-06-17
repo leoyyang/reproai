@@ -12,7 +12,7 @@
     {
       "name": "reproai",
       "source": "./claude-plugin",
-      "description": "Static pre-diagnose: audit/reorganize a replication package so a downstream reproducibility check passes first-try. Venue profiles (AEA, APSR, AJPS, JOP, ...) + author rule set. No code execution."
+      "description": "Static pre-diagnose: audit/reorganize a replication package so a downstream reproducibility check passes first-try. Venue profiles (AEA, Econometric Society, APSR, AJPS, JOP, ...) + author rule set. No code execution."
     }
   ]
 }

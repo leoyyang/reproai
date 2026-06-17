@@ -128,5 +128,13 @@ coefficients and never issues a reproducibility verdict.
   `test_a11_and_d3_fire_on_multiscript_intermediate`); 23 pass. Clean-package noise test extended to
   forbid false D1/D3 fires. New internal multiscript fixture under `tests/fixtures/` (gitignored).
 
+## venue profile — add `econsoc` (Econometric Society) (2026-06-16)
+
+- Added the `econsoc` venue profile (profile_version 2026-06-15), 8 checks, for Econometrica,
+  Quantitative Economics, and Theoretical Economics. Deposit to the Econometric Society Journals'
+  Community at Zenodo after the Data Editor's reproducibility checks; SSDE template README strongly
+  encouraged; one-month deposit window; five-year preservation for exempted restricted data. Reuses
+  the existing detector set (no engine change); added to the venue-profile test matrix.
+
 <!-- Append new entries above this line. Each entry: bump rules_version, list added/changed rule ids
      and the Line 2 lesson(s) they were promoted from. -->
