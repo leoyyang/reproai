@@ -224,6 +224,7 @@ body {
 .card h3 { margin: 20px 0 10px; font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
 .card p { color: var(--ink-soft); font-size: 15px; line-height: 1.6; margin: 0 0 16px; }
 .card code { font-family: var(--mono); font-size: 12.5px; background: var(--paper-3); padding: 2px 6px; border-radius: 5px; color: var(--red-dark); }
+.card p.term-note { margin: 14px 0 0; font-size: 13px; line-height: 1.55; color: var(--ink-faint); }
 
 .term {
   font-family: var(--mono); font-size: 12.6px; line-height: 1.78;
@@ -265,9 +266,11 @@ body {
 /* cite */
 .cite-label, .cite-label-row .cite-label { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-faint); margin: 16px 0 8px; }
 .cite-label-row { display: flex; justify-content: space-between; align-items: center; }
-#cite .cards { align-items: start; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); }
+#cite .cards { grid-template-columns: 1fr; max-width: 760px; }
 #cite .term { white-space: normal; }
 #cite .term-line { white-space: pre-wrap; word-break: break-word; }
+.cite-bibtex { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--line-soft); }
+.cite-bibtex .cite-label { margin-top: 0; }
 .cite-title { font-size: 20px; line-height: 1.32; font-weight: 700; letter-spacing: -0.015em; margin: 6px 0 10px; text-wrap: balance; }
 .cite-meta { color: var(--ink-soft); font-size: 14.5px; margin: 0 0 14px; }
 .link { color: var(--red); text-decoration: none; font-weight: 600; font-size: 14.5px; }

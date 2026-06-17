@@ -60,17 +60,31 @@ rule set is generic guidance and names no specific paper.
 
 ## Install
 
+**Claude Code**
+
 ```
 /plugin marketplace add leoyyang/reproai
-/plugin install reproai@reproai --scope project
+/plugin install reproai@reproai
 ```
 
-Then `/reproai:check` in a project that contains your replication package.
+Installs globally — then run `/reproai:check` in any project that contains your replication package.
+
+**OpenAI Codex**
+
+```
+git clone https://github.com/leoyyang/reproai
+cd reproai
+./codex-plugin/install.sh   # links the reproai skills into ~/.agents/skills
+pip install -e core         # put the reproai CLI on PATH
+```
+
+Then ask Codex for `/reproai-check` in any project.
 
 ## Layout
 
 ```
-claude-plugin/        the plugin (commands/, agents/, .claude-plugin/plugin.json)
+claude-plugin/        the Claude Code plugin (commands/, agents/, .claude-plugin/plugin.json)
+codex-plugin/         the OpenAI Codex adapter (.agents/skills/, install.sh) over the same engine
 core/                 the deterministic engine (line1_core) + rules + venue profiles + schemas
 tools/                maintainer tooling (build the public bundle, promote rules, bump version)
 site/                 the reproai.org website
