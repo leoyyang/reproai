@@ -265,7 +265,9 @@ body {
 /* cite */
 .cite-label, .cite-label-row .cite-label { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-faint); margin: 16px 0 8px; }
 .cite-label-row { display: flex; justify-content: space-between; align-items: center; }
-#cite .cards { align-items: start; }
+#cite .cards { align-items: start; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); }
+#cite .term { white-space: normal; }
+#cite .term-line { white-space: pre-wrap; word-break: break-word; }
 .cite-title { font-size: 20px; line-height: 1.32; font-weight: 700; letter-spacing: -0.015em; margin: 6px 0 10px; text-wrap: balance; }
 .cite-meta { color: var(--ink-soft); font-size: 14.5px; margin: 0 0 14px; }
 .link { color: var(--red); text-decoration: none; font-weight: 600; font-size: 14.5px; }
@@ -286,6 +288,7 @@ body {
   .hero { grid-template-columns: 1fr; gap: 40px; padding-bottom: 64px; }
   .hero h1 { font-size: 46px; }
   .cards.two, .cards.four { grid-template-columns: 1fr; }
+  #cite .cards { grid-template-columns: 1fr; }
   .nav-links { gap: 20px; }
   .nav-links a { font-size: 14px; }
   .section { padding: 60px 22px; }
