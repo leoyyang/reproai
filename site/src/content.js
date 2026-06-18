@@ -8,7 +8,7 @@
  *
  * SYNTAX-HIGHLIGHTED BLOCKS are token lists rather than plain sentences:
  *   - install.claude.lines / install.codex.lines  → the two install terminals
- *   - usage.runLines                               → the usage terminal demo
+ *   - usage.cli.runLines                           → the command-line terminal demo
  *   - cite.bibLines                                → the BibTeX block
  *   To edit them, change the text inside each token's  t: "..."  . The wrapper
  *   (P, CMD, SLASH, FLAG, OUT, TXT / AT, KEY, FLD, VAL, PUN) only sets the highlight color.
@@ -114,21 +114,31 @@ export const content = {
     head: {
       lead: "How to",
       emphasis: "use",
-      sub: "Once installed, point ReproAI at your replication package. The static commands diagnose and rewrite a copy; the optional smoke test runs it.",
+      sub: "Once installed, use ReproAI from the command line or straight from your AI assistant in the desktop app. Either way it diagnoses your package and rewrites a copy; the optional smoke test then runs it.",
     },
-    card: {
-      title: "Pre-diagnose, fix, smoke-test",
-      body: "`check`, `comply`, and `fix` are static commands: none of them runs your code; `fix` rewrites the recommended changes to a copy. The optional `debug` step then runs that copy as a smoke test: does it execute end to end and produce its tables and figures? Every runtime fix remains your call.",
+    cli: {
+      title: "Command Line",
+      runLines: [
+        [P("❯ "), SLASH("/reproai:check"), TXT(" . "), FLAG("--venue aea")],
+        [OUT("  advisory: P0=1 P1=1 P3=2")],
+        [OUT("  venue (aea): 2 pass / 2 fail / 5 action")],
+        [P("❯ "), SLASH("/reproai:fix"), TXT(" . "), OUT("# rewrite to a copy")],
+        [P("❯ "), SLASH("/reproai:debug"), TXT(" "), OUT("# smoke-test the copy: does it run?")],
+        [OUT("  ✓ runs clean · tables + figures emitted")],
+      ],
+      notes: [
+        "Start `claude` in the folder that holds your code and data, so `.` points at the package.",
+        "Swap `--venue aea` for your target journal, such as `apsr`, `ajps`, or `jop`.",
+        "`fix` always rewrites to a copy; your original files are never touched.",
+      ],
     },
-    demoTitle: "A typical run",
-    runLines: [
-      [P("❯ "), SLASH("/reproai:check"), TXT(" . "), FLAG("--venue aea")],
-      [OUT("  advisory: P0=1 P1=1 P3=2")],
-      [OUT("  venue (aea): 2 pass / 2 fail / 5 action")],
-      [P("❯ "), SLASH("/reproai:fix"), TXT(" . "), OUT("# rewrite to a copy")],
-      [P("❯ "), SLASH("/reproai:debug"), TXT(" "), OUT("# smoke-test the copy: does it run?")],
-      [OUT("  ✓ runs clean · tables + figures emitted")],
-    ],
+    app: {
+      title: "App",
+      intro: "In the Claude or Codex desktop app, open the folder with your code and data, then tell your AI assistant what you want:",
+      speaker: "You",
+      prompt: "Use the ReproAI plugin to reorganize my replication package for APSR.",
+      note: "It runs the same `check`, `fix`, and `debug` steps and reports back what it changed. Every fix stays your call.",
+    },
   },
 
   examples: {
@@ -196,7 +206,7 @@ export const content = {
   },
 
   cite: {
-    head: { lead: "Cite", emphasis: "ReproAI", sub: "If ReproAI helps your work, please cite it." },
+    head: { lead: "Cite", emphasis: "ReproAI", sub: "If ReproAI helps your research, consider citing our work." },
     referenceLabel: "Reference",
     bibtexLabel: "BibTeX",
     copyIdle: "Copy",
@@ -218,8 +228,7 @@ export const content = {
 
   footer: {
     links: [
-      { label: "GitHub", href: GH },
-      { label: "Cite", href: "#cite" },
+      { label: "Report a bug or ask for a feature", href: `${GH}/issues`, newTab: true },
     ],
     note: "The plugin authors run before submission.",
   },

@@ -225,6 +225,10 @@ body {
 .card p { color: var(--ink-soft); font-size: 15px; line-height: 1.6; margin: 0 0 16px; }
 .card code { font-family: var(--mono); font-size: 12.5px; background: var(--paper-3); padding: 2px 6px; border-radius: 5px; color: var(--red-dark); }
 .card p.term-note { margin: 14px 0 0; font-size: 13px; line-height: 1.55; color: var(--ink-faint); }
+.term-notes { margin: 14px 0 0; padding-left: 18px; list-style: disc; }
+.term-notes li { font-size: 13px; line-height: 1.55; color: var(--ink-faint); margin-bottom: 5px; }
+.term-notes li:last-child { margin-bottom: 0; }
+.term-notes li::marker { color: var(--line); }
 
 .term {
   font-family: var(--mono); font-size: 12.6px; line-height: 1.78;
@@ -249,6 +253,30 @@ body {
 .flow li { font-size: 14.5px; line-height: 1.55; margin-bottom: 6px; }
 .card-out { font-size: 13.5px; color: var(--ink-faint); border-top: 1px solid var(--line-soft); padding-top: 14px; }
 
+/* usage · app (chat) card */
+.chat {
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 15px 16px;
+}
+.chat-head {
+  font-family: var(--mono);
+  font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--ink-faint);
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 10px;
+}
+.chat-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--red); flex: none; }
+.chat-bubble {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px; border-top-left-radius: 4px;
+  padding: 12px 15px; margin: 0;
+  font-size: 15px; line-height: 1.55; color: var(--ink);
+  box-shadow: var(--shadow-sm);
+}
+
 /* faq */
 .faq { max-width: none; }
 .faq-item { border-bottom: 1px solid var(--line-soft); }
@@ -266,7 +294,7 @@ body {
 /* cite */
 .cite-label, .cite-label-row .cite-label { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-faint); margin: 16px 0 8px; }
 .cite-label-row { display: flex; justify-content: space-between; align-items: center; }
-#cite .cards { grid-template-columns: 1fr; max-width: 760px; }
+#cite .cards { grid-template-columns: 1fr; max-width: 960px; }
 #cite .term { white-space: normal; }
 #cite .term-line { white-space: pre-wrap; word-break: break-word; }
 .cite-bibtex { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--line-soft); }

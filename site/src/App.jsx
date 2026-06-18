@@ -182,13 +182,21 @@ function Usage() {
       <div className="cards two">
         <div className="card">
           <span className="redline" />
-          <h3>{c.card.title}</h3>
-          <p>{withCode(c.card.body)}</p>
+          <h3>{c.cli.title}</h3>
+          <Term lines={c.cli.runLines} />
+          <ul className="term-notes">
+            {c.cli.notes.map((n, i) => <li key={i}>{withCode(n)}</li>)}
+          </ul>
         </div>
         <div className="card">
           <span className="redline" />
-          <h3>{c.demoTitle}</h3>
-          <Term lines={c.runLines} />
+          <h3>{c.app.title}</h3>
+          <p>{withCode(c.app.intro)}</p>
+          <div className="chat">
+            <div className="chat-head"><span className="chat-dot" />{c.app.speaker}</div>
+            <div className="chat-bubble">{c.app.prompt}</div>
+          </div>
+          <p className="term-note">{withCode(c.app.note)}</p>
         </div>
       </div>
     </section>
@@ -290,7 +298,7 @@ function Footer() {
         </div>
         <div className="footer-links">
           {content.footer.links.map((l) => (
-            <a key={l.label} href={l.href}>{l.label}</a>
+            <a key={l.label} href={l.href} {...(l.newTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}>{l.label}</a>
           ))}
         </div>
         <div className="footer-note">{content.footer.note}</div>
