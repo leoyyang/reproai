@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "reproai",
   "displayName": "ReproAI — replication package pre-diagnose",
-  "version": "0.5.0",
+  "version": "0.4.5",
   "description": "Author-facing pre-diagnose for replication packages. The static commands (check, comply, fix) scan a working directory, apply an author rule set and a venue profile (AEA, ...), and advise how to reorganize the package so a downstream reproducibility check passes on the first try — without executing author code. The optional debug command runs the package as a smoke test (does it run, did the injected table/figure outputs appear). reproai never compares coefficients and never issues a reproducibility verdict.",
   "author": {
     "name": "reproAI"

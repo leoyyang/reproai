@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "line1-pre-diagnose"
-version = "0.5.0"
+version = "0.4.5"
 description = "Line 1 pre-diagnose: a static, no-execution helper that audits and reorganizes a replication package so a downstream reproducibility check passes on the first try."
 readme = "README.md"
 requires-python = ">=3.10"

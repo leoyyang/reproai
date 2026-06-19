@@ -259,7 +259,7 @@ never posts: it builds a pre-filled new-issue URL the user submits, and never in
   new `worldbank` venue profile suggested by Mateo Servent (World Bank). Registered `worldbank` in the
   shipped-venue lists across the check / comply / contribute command docs and Codex skills.
 
-## plugin 0.5.0: unified manual-action / honesty taxonomy + 3 new static detectors (2026-06-19)
+## plugin 0.4.5: unified manual-action / honesty taxonomy + 3 new static detectors (2026-06-19)
 
 Engine feature: every venue check now reports an honest status, and "checkable-in-principle" items
 that were stubbed are now real detectors.
@@ -297,7 +297,7 @@ that were stubbed are now real detectors.
 - Tests: schema test covers the new statuses/fields; added a test that a manual_author_action check's
   detail equals its author_action-or-requirement, and a test that the 4 reclassified checks compute a
   real status. 67 passing.
-- Version bumped 0.4.3 → 0.5.0 across all six version files (the Claude + Codex manifests, both
+- Version bumped 0.4.3 → 0.4.5 across all six version files (the Claude + Codex manifests, both
   marketplace.json files, pyproject.toml, __init__.py).
 
 <!-- Append new entries above this line. Each entry: bump rules_version, list added/changed rule ids

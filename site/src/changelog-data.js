@@ -31,7 +31,7 @@ export const changelog = {
 
   releases: [
     {
-      version: "0.5.0",
+      version: "0.4.5",
       date: "June 19, 2026",
       title: "An honest pre-submission checklist, plus three new static checks.",
       changes: [
