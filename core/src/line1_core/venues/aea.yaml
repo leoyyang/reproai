@@ -48,8 +48,14 @@ checks:
   - check_id: AEA-FORMS
     requirement: "Data and Code Availability Form (+ Information Form, Archive Agreement) required."
     detector: manual_author_action
+    author_action: "Complete the AEA Data and Code Availability Form (plus the Information Form and Archive Agreement) and submit them with the deposit."
+    how: "Fill the official forms; copy the data-availability and software statements from your README so they match."
+    self_check: "All three forms are submitted and their statements agree with the README."
     source: "https://www.aeaweb.org/journals/forms/data-code-availability"
   - check_id: AEA-CONFIDENTIAL
     requirement: "If data cannot be public: dual-package model + a synthetic/fake dataset for a functionality test."
     detector: manual_author_action
+    author_action: "If any data cannot be made public, build a dual package and add a synthetic/fake dataset that lets a reviewer run a functionality test."
+    how: "Split into a public package (code + synthetic data) and a restricted package; document how the synthetic data mirrors the real schema."
+    self_check: "The package runs end to end on the synthetic data and produces the expected output shapes."
     source: "https://aeadataeditor.github.io/aea-de-guidance/"

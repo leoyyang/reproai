@@ -17,7 +17,8 @@
         "total": { "type": "integer" },
         "pass": { "type": "integer" },
         "fail": { "type": "integer" },
-        "needs_author_action": { "type": "integer" }
+        "needs_author_action": { "type": "integer" },
+        "not_implemented": { "type": "integer" }
       }
     },
     "checks": {
@@ -28,10 +29,14 @@
         "properties": {
           "check_id": { "type": "string" },
           "requirement": { "type": "string" },
-          "status": { "type": "string", "enum": ["pass", "fail", "needs_author_action", "not_applicable"] },
+          "status": { "type": "string", "enum": ["pass", "fail", "needs_author_action", "not_implemented", "not_applicable"] },
           "detail": { "type": "string" },
           "evidence": { "type": "array", "items": { "type": "string" } },
-          "source": { "type": "string", "description": "Authoritative source URL for this requirement." }
+          "source": { "type": "string", "description": "Authoritative source URL for this requirement." },
+          "author_action": { "type": "string", "description": "Concrete off-package action for a needs_author_action item; guidance, not a verdict." },
+          "how": { "type": "string", "description": "How to perform the author_action." },
+          "self_check": { "type": "string", "description": "How the author confirms the action is done; the engine never re-checks it." },
+          "needs_detector": { "type": "string", "description": "Name of the detector a not_implemented check is waiting on." }
         }
       }
     }

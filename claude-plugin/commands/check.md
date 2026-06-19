@@ -57,5 +57,16 @@ never execute the author's code.
 5. Offer the author a tiered plan: "fix P0 only", "P0+P1", or "all". Their next step is to apply
    the changes.
 
+5b. **Pre-submission author actions (venue checks the engine cannot verify statically).** In
+   `venue_compliance_report.json`, present every `needs_author_action` item as a SEPARATE
+   "Pre-submission author actions" checklist — do NOT fold these into the pass/fail counts. For each
+   one show: the `requirement`, the `author_action` (what to do), `how` (how to do it), `self_check`
+   (how the author confirms it), the official `source`, and an explicit line: **"the static engine
+   cannot verify this; complete it before submission."** Present `not_implemented` items honestly as
+   **"reproai can't check this yet"** (name the `needs_detector` it awaits). NEVER claim venue
+   compliance from a `needs_author_action` or `not_implemented` item, and NEVER mark one `pass`.
+   The deterministic engine owns every status; an author saying "I did it" is recorded as a NOTE
+   only and never changes a status.
+
 6. Be honest about limits: pre-diagnose **maximizes** the chance of a first-try pass; it does not
    **guarantee** it. Surface the `cannot_predict` list from `risk_register.json`.

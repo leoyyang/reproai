@@ -112,6 +112,11 @@ You never decide reproducibility and never execute the author's analysis code. R
    transcript that proceeds with a nonzero gate is invalid. Do not hand-wave "I fixed the tables";
    show the gate passing.
 
+   **Venue `needs_author_action` / `not_implemented` items are off-package and stay that way.** Do
+   not auto-fix them and do not mark them done. If the author says "I already did it," record it as a
+   NOTE next to the item only — the engine status NEVER changes from the author's answer, and a
+   `needs_author_action` item is never converted to `pass`.
+
 6. **Compare new advisory vs old.**
    - A finding that **disappeared** → that rewrite succeeded.
    - A finding that **remains** → read its (possibly updated) `fix_prompt`, understand why it

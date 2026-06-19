@@ -150,18 +150,24 @@ def venue_compliance_report(root, meta: dict[str, Any], checks: list[Check]) -> 
         "profile_version": meta["profile_version"],
         "standard": meta.get("standard", ""),
         "summary": meta["summary"],
-        "checks": [
-            {
-                "check_id": c.check_id,
-                "requirement": c.requirement,
-                "status": c.status,
-                "detail": c.detail,
-                "evidence": c.evidence,
-                "source": c.source,
-            }
-            for c in checks
-        ],
+        "checks": [_venue_check_item(c) for c in checks],
     }
+
+
+def _venue_check_item(c: Check) -> dict[str, Any]:
+    item: dict[str, Any] = {
+        "check_id": c.check_id,
+        "requirement": c.requirement,
+        "status": c.status,
+        "detail": c.detail,
+        "evidence": c.evidence,
+        "source": c.source,
+    }
+    for field in ("author_action", "how", "self_check", "needs_detector"):
+        value = getattr(c, field, "")
+        if value:
+            item[field] = value
+    return item
 
 
 # --- README scaffold (issue #3 item 2) ---------------------------------------------------------

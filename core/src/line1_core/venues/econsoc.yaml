@@ -43,12 +43,21 @@ checks:
   - check_id: ES-DEPOSIT-ZENODO
     requirement: "After the reproducibility checks, deposit the replication package in the Econometric Society Journals' Community at Zenodo (or another ES-approved trusted repository)."
     detector: manual_author_action
+    author_action: "After the reproducibility checks pass, deposit the package in the Econometric Society Journals' Community at Zenodo (or another ES-approved trusted repository)."
+    how: "Submit the package to the Zenodo community; record the resulting DOI in the manuscript."
+    self_check: "The Zenodo record holds the complete package and its DOI resolves."
     source: "https://www.econometricsociety.org/publications/es-data-editor-website/data-and-code-availability-policy"
   - check_id: ES-RESTRICTED-EXEMPTION
     requirement: "If data or code cannot be published in an open trusted repository, request an exemption at first submission and commit to preserving the materials for at least five years after publication."
     detector: manual_author_action
+    author_action: "If data or code cannot be openly published, request an exemption at first submission and commit to preserving the materials for at least five years after publication."
+    how: "State the restriction and your preservation plan in the first-submission cover letter to the Data Editor."
+    self_check: "The exemption request is on record and a five-year preservation arrangement exists."
     source: "https://www.econometricsociety.org/publications/es-data-editor-website/data-and-code-availability-policy"
   - check_id: ES-DEPOSIT-TIMELINE
     requirement: "Submit the replication materials to the Data Editor within one month of conditional acceptance (extensions only via the Director of Publications)."
     detector: manual_author_action
-    source: "https://www.econometricsociety.org/publications/es-data-editor-website/package"
+    author_action: "Send the replication materials to the Data Editor within one month of conditional acceptance; seek any extension from the Director of Publications."
+    how: "Track the conditional-acceptance date and submit the package before the one-month deadline."
+    self_check: "The materials reached the Data Editor within one month, or an extension is documented."
+    source: "https://www.econometricsociety.org/publications/es-data-editor-website/data-and-code-availability-policy"

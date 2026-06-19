@@ -55,14 +55,23 @@ checks:
     detector: license_at_root
     source: "https://jasa-acs.github.io/repro-guide/"
   - check_id: JASA-REPRO-RNG
-    requirement: "Stochastic results must be reproducible: set seeds, and for parallel code use doRNG (registerDoRNG + %dorng%) rather than a bare doParallel %dopar% loop. `reproai check` flags a non-reproducible parallel loop if present (advisory rule C7); after fixing it, regenerate the affected tables."
-    detector: manual_author_action
+    requirement: "Stochastic results must be reproducible: set seeds, and for parallel code use doRNG (registerDoRNG + %dorng%) rather than a bare doParallel %dopar% loop. After fixing a non-reproducible parallel loop, regenerate the affected tables."
+    detector: seeded_rng
+    author_action: "If a parallel loop draws random numbers without a reproducible stream, switch to doRNG (registerDoRNG + %dorng%) or clusterSetRNGStream, then regenerate the affected tables."
+    how: "Wrap the parallel loop with registerDoRNG(seed) (or use %dorng%), or set clusterSetRNGStream on the cluster; rerun to refresh outputs."
+    self_check: "Running the package twice from a clean session yields identical stochastic numbers."
     source: "https://jasa-acs.github.io/repro-guide/"
   - check_id: JASA-ACC-FORM
     requirement: "Complete and submit the Data & Code Availability (ACC) form as a separate PDF, and keep its Part 1 (Data) and Part 3 (Workflow) abstracts consistent with the README and the code."
     detector: manual_author_action
+    author_action: "Fill in and submit the JASA Data & Code Availability (ACC) form as a separate PDF with the supplements."
+    how: "Use the ACC form template; copy the data and workflow descriptions from your README so they match."
+    self_check: "The form's Part 1 (Data) and Part 3 (Workflow) abstracts say the same thing as the README and the code."
     source: "https://jasa-acs.github.io/repro-guide/pages/acc.html"
   - check_id: JASA-DEPOSIT
     requirement: "Host the materials in a Git repository (public by publication) and provide a single reproducibility_materials.zip with the article supplements."
     detector: manual_author_action
+    author_action: "Put the materials in a Git repository (it may stay private until publication) and upload a single reproducibility_materials.zip with the supplements."
+    how: "Create the repo (GitHub/GitLab/BitBucket), then export a zip of the full package for the article supplements."
+    self_check: "The zip opens to the complete package and the repository is set to go public at publication."
     source: "https://jasa-acs.github.io/repro-guide/"

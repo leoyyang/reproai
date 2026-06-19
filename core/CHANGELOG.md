@@ -259,5 +259,46 @@ never posts: it builds a pre-filled new-issue URL the user submits, and never in
   new `worldbank` venue profile suggested by Mateo Servent (World Bank). Registered `worldbank` in the
   shipped-venue lists across the check / comply / contribute command docs and Codex skills.
 
+## plugin 0.5.0: unified manual-action / honesty taxonomy + 3 new static detectors (2026-06-19)
+
+Engine feature: every venue check now reports an honest status, and "checkable-in-principle" items
+that were stubbed are now real detectors.
+
+- Three-tier status taxonomy. `manual_author_action` keeps `needs_author_action` but its `detail` is
+  now the check's own `author_action`-or-`requirement` (not the generic "cannot be verified
+  statically" stub). `unbuilt_detector` now emits the NEW status `not_implemented` (was the
+  misleading `not_applicable`), keeping `needs_detector`. `not_applicable` is reserved for genuinely
+  inapplicable conditional requirements. The venue summary gains a `not_implemented` count.
+- `Check` carries optional, author-facing guidance fields `author_action` / `how` / `self_check`
+  (and `needs_detector`); `reports.py` emits them only when populated. They are grounded in the
+  requirement + source, are NOT policy quotes, and NEVER change a status (anti-sycophancy boundary).
+- 3 NEW static, no-execution, low-false-positive detectors added to `KNOWN_DETECTORS`:
+  `data_availability_statement` (root README scan for a Data Availability Statement: pass / fail when
+  no README / needs_author_action when present without one), `data_citation` (README + code/text scan
+  for a DOI / handle / Dataverse-Zenodo-ICPSR-OSF URL), and `seeded_rng` (R code-shape scan: a
+  parallel loop with no reproducible-RNG signal → needs_author_action; never executes code).
+- Reclassified the 4 mis-tiered checks onto the real detectors: `WB-DATA-AVAILABILITY` and
+  `APSR-DATA-AVAILABILITY` → `data_availability_statement`; `GEN-DV-DATA-CITATION` → `data_citation`;
+  `JASA-REPRO-RNG` → `seeded_rng`.
+- Added `author_action` / `how` / `self_check` guidance to the remaining `manual_author_action` checks
+  across aea, ajps, jop, econsoc, apsr, jasa, worldbank.
+- World Bank coverage completion (the gaps Mateo Servent's audit surfaced): new checks `WB-DATA-RIGHTS`
+  (rights statement), `WB-MANUSCRIPT` (final manuscript), `WB-RAW-OUTPUTS` (raw tables/figures), and
+  `WB-CODE-BUILDS-EXHIBITS` (code creates all exhibits and in-text numbers), each with a verbatim
+  `policy_quote`; extended `WB-DATA-AVAILABILITY` to mention the rights statement and per-dataset
+  source/URL/access-year; added the "guides future readers" / "guidance for the reviewer" hints to the
+  `WB-README-SECTIONS` requirement text.
+- Schema: `not_implemented` added to the status enum; optional `author_action` / `how` / `self_check`
+  / `needs_detector` fields and a `not_implemented` summary count.
+- Command docs: `check.md` (and the Codex check skill) present `needs_author_action` items as a
+  separate "Pre-submission author actions" checklist and `not_implemented` items as "reproai can't
+  check this yet"; `fix.md` / `debug.md` record an author's self-attestation as a NOTE only — the
+  engine status never changes. New `venues/README.md` documents the taxonomy for maintainers.
+- Tests: schema test covers the new statuses/fields; added a test that a manual_author_action check's
+  detail equals its author_action-or-requirement, and a test that the 4 reclassified checks compute a
+  real status. 67 passing.
+- Version bumped 0.4.3 → 0.5.0 across all six version files (the Claude + Codex manifests, both
+  marketplace.json files, pyproject.toml, __init__.py).
+
 <!-- Append new entries above this line. Each entry: bump rules_version, list added/changed rule ids
      and the Line 2 lesson(s) they were promoted from. -->

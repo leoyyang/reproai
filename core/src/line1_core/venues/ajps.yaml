@@ -47,8 +47,14 @@ checks:
   - check_id: AJPS-RESTRICTED-DATA
     requirement: "Exemptions (human subjects / restricted / proprietary) need editor approval; still provide other verification materials and a note describing the restriction."
     detector: manual_author_action
+    author_action: "If any data are restricted, request editor approval for an exemption and add a note describing the restriction, while still providing all other verification materials."
+    how: "Email the editor with the restriction and your access basis; include the non-restricted materials in the deposit."
+    self_check: "You have written editor approval and a restriction note, and every non-restricted result is still verifiable."
     source: "https://ajps.org/ajps-verification-policy/"
   - check_id: AJPS-DEPOSIT-DATAVERSE
     requirement: "Place all verification files in the AJPS Dataverse before final acceptance; verification by Odum is contingent for publication."
     detector: manual_author_action
+    author_action: "Deposit all verification files in the AJPS Dataverse before final acceptance."
+    how: "Create the AJPS Dataverse record and upload the complete verification package."
+    self_check: "The Dataverse record holds every file Odum needs to verify the results."
     source: "https://ajps.org/guidelines-for-accepted-articles/"

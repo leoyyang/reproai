@@ -43,8 +43,14 @@ checks:
   - check_id: JOP-RESTRICTED-DATA
     requirement: "Notify the editor at submission of any restricted data (JETS baseline); the editor may grant an exemption with conditions."
     detector: manual_author_action
+    author_action: "At submission, notify the editor of any restricted data; if granted an exemption, follow its conditions."
+    how: "State the restricted source and your access basis in the cover note to the editor."
+    self_check: "The editor is on record about the restriction and any exemption conditions are met."
     source: "https://journals.sagepub.com/doi/full/10.1177/0010414015594717"
   - check_id: JOP-DEPOSIT-DATAVERSE
     requirement: "Deposit replication files in the JOP Dataverse on Harvard Dataverse before publication."
     detector: manual_author_action
+    author_action: "Deposit the replication files in the JOP Dataverse on Harvard Dataverse before publication."
+    how: "Create the JOP Dataverse record and upload the complete replication package."
+    self_check: "The Dataverse record holds the full package and resolves from its DOI."
     source: "https://www.journals.uchicago.edu/journals/jop/data-policy"

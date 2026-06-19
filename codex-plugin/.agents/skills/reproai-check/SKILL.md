@@ -47,5 +47,12 @@ never execute the author's code.
 
 5. Offer a tiered plan: "fix P0 only", "P0+P1", or "all". The next step is `reproai-fix`.
 
+5b. **Pre-submission author actions.** Present every venue `needs_author_action` item as a SEPARATE
+   checklist (not in the pass/fail counts), each with `author_action` / `how` / `self_check` / the
+   official `source` and the line "the static engine cannot verify this; complete it before
+   submission." Show `not_implemented` items as "reproai can't check this yet" (name `needs_detector`).
+   NEVER mark such an item `pass`; the engine owns every status, and an author's "I did it" is a NOTE
+   only — it never changes a status.
+
 6. Be honest: pre-diagnose maximizes the chance of a first-try pass; it does not guarantee it.
    Surface the `cannot_predict` list from `risk_register.json`.

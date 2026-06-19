@@ -39,5 +39,8 @@ checks:
     source: "https://www.projecttier.org/tier-protocol/protocol-4-0/root/data/"
   - check_id: GEN-DV-DATA-CITATION
     requirement: "Provide data citations with persistent identifiers (JETS/DA-RT)."
-    detector: manual_author_action
+    detector: data_citation
+    author_action: "Cite each dataset with a persistent identifier (a DOI or handle) in the README and the manuscript."
+    how: "For every dataset, add a citation with its DOI/handle (e.g. a Dataverse or ICPSR link) so a replicator can retrieve the exact data."
+    self_check: "Each dataset the code reads has a citation carrying a resolvable persistent identifier."
     source: "https://journals.sagepub.com/doi/full/10.1177/0010414015594717"

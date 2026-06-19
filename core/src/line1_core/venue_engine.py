@@ -25,7 +25,8 @@ _ABS_PATH = re.compile(r'(?:[A-Za-z]:\\|\\\\|/Users/|/home/|~/)')
 KNOWN_DETECTORS = frozenset({
     "readme_pdf_at_root", "readme_at_root", "readme_has_sections", "has_master_script",
     "env_declared", "no_absolute_paths", "rederive_from_raw", "file_count_limit",
-    "license_at_root", "manual_author_action", "unbuilt_detector",
+    "license_at_root", "data_availability_statement", "data_citation", "seeded_rng",
+    "manual_author_action", "unbuilt_detector",
 })
 
 
@@ -37,6 +38,13 @@ class Check:
     detail: str
     evidence: list[str]
     source: str
+    # Optional guidance, never a verdict — the engine still owns `status`. author_action/how/self_check
+    # describe an off-package action the static engine cannot verify; needs_detector names the detector a
+    # not_implemented check awaits. (Anti-sycophancy: these inform the author, they do not change a status.)
+    author_action: str = ""
+    how: str = ""
+    self_check: str = ""
+    needs_detector: str = ""
 
 
 def load_profile(venue: str) -> dict[str, Any]:
@@ -121,6 +129,96 @@ def _env_declared(root: Path, entries: list[FileEntry]) -> bool:
     return True
 
 
+_DAS_SIGNALS = (
+    "data availability",
+    "all data publicly available",
+    "some data restricted",
+    "no data publicly available",
+    "data are publicly available",
+    "data is publicly available",
+    "data availability statement",
+)
+_DOI_RE = re.compile(r'10\.\d{4,9}/\S+')
+_PID_URL_RE = re.compile(
+    r'(?:doi\.org/|hdl\.handle\.net/|dataverse\.|zenodo\.org/|openicpsr\.org/|'
+    r'icpsr\.umich\.edu/|osf\.io/)',
+    re.IGNORECASE,
+)
+# R parallel-loop shapes that draw random numbers; flagged only when no reproducible-RNG signal is near.
+_PARALLEL_RE = re.compile(r'%dopar%|\bforeach\s*\(|\bmclapply\s*\(|\bparLapply\s*\(|\bparSapply\s*\(')
+_RNG_SIGNAL_RE = re.compile(
+    r'registerDoRNG|%dorng%|clusterSetRNGStream|set\.seed|RNGkind\s*\(\s*["\']L\'Ecuyer'
+)
+
+
+def _readme_texts(root: Path, entries: list[FileEntry]) -> list[tuple[str, str]]:
+    """Return (filename, lowercased text) for each root README — plain text directly, PDF via pdftotext."""
+    out: list[tuple[str, str]] = []
+    for e in entries:
+        name = Path(e.path).name
+        if "/" in e.path or "\\" in e.path:
+            continue
+        if name.lower() in {"readme.md", "readme.txt"}:
+            try:
+                out.append((name, (root / e.path).read_text(encoding="utf-8", errors="replace").lower()))
+            except OSError:
+                continue
+    pdf = _root_readme(root)
+    if pdf is not None:
+        extracted = _pdftotext(pdf)
+        if extracted is not None:
+            out.append((pdf.name, extracted.lower()))
+    return out
+
+
+def _data_availability_statement(root: Path, entries: list[FileEntry]) -> tuple[str, str, list[str]]:
+    readmes = _readme_texts(root, entries)
+    if not readmes:
+        return "fail", "No README at the package root to carry a Data Availability Statement.", []
+    for name, text in readmes:
+        if any(sig in text for sig in _DAS_SIGNALS) or ("availability" in text and "data" in text):
+            return "pass", f"Data Availability Statement signal found in {name}.", [name]
+    names = [n for n, _ in readmes]
+    return ("needs_author_action",
+            "README present but no Data Availability Statement detected; add one summarizing data "
+            "availability (all public / some restricted / none public) with per-dataset source and access.",
+            names)
+
+
+def _data_citation(root: Path, entries: list[FileEntry]) -> tuple[str, str, list[str]]:
+    for name, text in _readme_texts(root, entries):
+        if _DOI_RE.search(text) or _PID_URL_RE.search(text):
+            return "pass", f"Persistent identifier (DOI/handle/repository URL) found in {name}.", [name]
+    for e in entries:
+        if e.language not in {"stata", "r", "python", "doc"}:
+            continue
+        try:
+            text = (root / e.path).read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        if _DOI_RE.search(text) or _PID_URL_RE.search(text):
+            return "pass", f"Persistent identifier (DOI/handle/repository URL) found in {e.path}.", [e.path]
+    return ("needs_author_action",
+            "No persistent identifier found; cite each dataset with a DOI or handle (a Dataverse/Zenodo/"
+            "ICPSR link) so a replicator can retrieve the exact data.", [])
+
+
+def _seeded_rng(root: Path, entries: list[FileEntry]) -> tuple[str, str, list[str]]:
+    for e in entries:
+        if e.language != "r":
+            continue
+        try:
+            text = (root / e.path).read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        if _PARALLEL_RE.search(text) and not _RNG_SIGNAL_RE.search(text):
+            return ("needs_author_action",
+                    "Parallel loop without a reproducible-RNG signal (registerDoRNG/%dorng%/"
+                    "clusterSetRNGStream/set.seed); make parallel RNG reproducible (doRNG) and regenerate "
+                    f"the affected tables. Code-shape scan only, no execution — see {e.path}.", [e.path])
+    return "pass", "No non-reproducible parallel RNG pattern detected.", []
+
+
 def run(root: Path, entries: list[FileEntry], venue: str) -> tuple[dict[str, Any], list[Check]]:
     return run_profile(root, entries, load_profile(venue))
 
@@ -140,6 +238,10 @@ def run_profile(root: Path, entries: list[FileEntry], profile: dict[str, Any]) -
                 detail=detail,
                 evidence=evidence,
                 source=spec.get("source", ""),
+                author_action=spec.get("author_action", "") or "",
+                how=spec.get("how", "") or "",
+                self_check=spec.get("self_check", "") or "",
+                needs_detector=spec.get("needs_detector", "") or "",
             )
         )
 
@@ -214,14 +316,25 @@ def run_profile(root: Path, entries: list[FileEntry], profile: dict[str, Any]) -
             add(spec, "pass" if lic else "fail",
                 f"License file present ({lic})." if lic else "No LICENSE file at the package root.",
                 [lic] if lic else [])
+        elif detector == "data_availability_statement":
+            status, detail, evidence = _data_availability_statement(root, entries)
+            add(spec, status, detail, evidence)
+        elif detector == "data_citation":
+            status, detail, evidence = _data_citation(root, entries)
+            add(spec, status, detail, evidence)
+        elif detector == "seeded_rng":
+            status, detail, evidence = _seeded_rng(root, entries)
+            add(spec, status, detail, evidence)
         elif detector == "manual_author_action":
-            add(spec, "needs_author_action", "Requires an author action that cannot be verified statically.", [])
+            # carry the specific requirement (or its author_action) as detail, not a generic stub.
+            detail = spec.get("author_action") or spec["requirement"]
+            add(spec, "needs_author_action", detail, [])
         elif detector == "unbuilt_detector":
             # an honest, CI-guarded placeholder: a statically-checkable requirement whose detector has
-            # not been built yet. Deliberately not_applicable + named, so it is never mistaken for a
-            # permanent manual_author_action stub and can be found by test_no_unbuilt_detectors_in_shipped_profiles.
+            # not been built yet. not_implemented (not not_applicable) + named, so it is never mistaken
+            # for a permanent manual stub and is found by test_no_unbuilt_detectors_in_shipped_profiles.
             target = spec.get("needs_detector", "?")
-            add(spec, "not_applicable",
+            add(spec, "not_implemented",
                 f"Check '{spec['check_id']}' awaits a new detector '{target}'; reproai cannot verify it yet.", [])
         else:
             add(spec, "not_applicable", f"Unknown detector '{detector}'.", [])
@@ -231,6 +344,7 @@ def run_profile(root: Path, entries: list[FileEntry], profile: dict[str, Any]) -
         "pass": sum(1 for c in checks if c.status == "pass"),
         "fail": sum(1 for c in checks if c.status == "fail"),
         "needs_author_action": sum(1 for c in checks if c.status == "needs_author_action"),
+        "not_implemented": sum(1 for c in checks if c.status == "not_implemented"),
     }
     meta = {
         "venue": profile["venue"],

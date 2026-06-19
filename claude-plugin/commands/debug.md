@@ -16,6 +16,9 @@ eyeball test against the paper.
 - It does **not** compare coefficients to the paper.
 - It does **not** issue any "reproducible / verified / certified" verdict — that is Line 2.
 - It does **not** auto-fix errors in a silent loop. **Every fix is the author's decision.**
+- It does **not** change a venue check's status. If you surface venue results and the author says
+  they completed a `needs_author_action` item, record it as a NOTE only; the deterministic engine
+  owns every status, and an author's answer never flips `needs_author_action` to `pass`.
 
 ## Boundary
 

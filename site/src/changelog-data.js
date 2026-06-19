@@ -31,6 +31,33 @@ export const changelog = {
 
   releases: [
     {
+      version: "0.5.0",
+      date: "June 19, 2026",
+      title: "An honest pre-submission checklist, plus three new static checks.",
+      changes: [
+        {
+          tag: "New",
+          text: "A clear pre-submission checklist. Venue requirements that reproai cannot confirm by reading your package — signing a form, depositing to a repository, requesting a verification — are now shown as their own \"things to do before you submit\" list, each with what to do, how to do it, how to check you've done it, and the official source. reproai never marks these as passed for you; you complete them.",
+        },
+        {
+          tag: "New",
+          text: "A check for a Data Availability Statement: it looks in your README for a statement saying whether the data are public, partly restricted, or not public, and points it out if it's missing.",
+        },
+        {
+          tag: "New",
+          text: "A check for data citations: it looks for a persistent identifier (a DOI or handle, or a Dataverse/Zenodo/ICPSR link) so a replicator can fetch the exact data you used.",
+        },
+        {
+          tag: "Improved",
+          text: "The reproducible-parallel-results check now reads your R code directly: if a parallel loop draws random numbers without a fixed, reproducible stream, it tells you to switch to doRNG and regenerate the affected tables.",
+        },
+        {
+          tag: "Improved",
+          text: "World Bank venue: completes the checklist with the rights statement confirming you had legitimate access to the data, the final manuscript, the paper's tables and figures in raw form, and the expectation that code creates every exhibit and in-text number. Gaps suggested by Mateo Servent (World Bank).",
+        },
+      ],
+    },
+    {
       version: "0.4.3",
       date: "June 19, 2026",
       title: "A venue for the World Bank Reproducible Research Repository.",

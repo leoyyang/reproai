@@ -39,6 +39,52 @@ def test_all_venue_profiles_run(messy_pkg: Path, venue: str) -> None:
     assert vc["summary"]["total"] > 0
 
 
+def test_manual_action_detail_is_specific_not_a_stub() -> None:
+    # the manual_author_action branch must carry the check's own author_action-or-requirement as the
+    # detail, not the old generic "cannot be verified statically" stub.
+    from line1_core import inventory, venue_engine
+
+    root = Path(__file__).resolve().parents[1]
+    entries = inventory.scan(root)
+    seen = 0
+    for venue in _ALL_VENUES:
+        profile = venue_engine.load_profile(venue)
+        by_id = {c["check_id"]: c for c in profile.get("checks", [])}
+        _, checks = venue_engine.run_profile(root, entries, profile)
+        for c in checks:
+            spec = by_id.get(c.check_id, {})
+            if spec.get("detector") == "manual_author_action":
+                seen += 1
+                expected = spec.get("author_action") or spec["requirement"]
+                assert c.detail == expected
+                assert "cannot be verified statically" not in c.detail
+    assert seen > 0
+
+
+def test_reclassified_checks_compute_real_status() -> None:
+    # the 4 mis-tiered checks now run real static detectors: a computed status from the new detector
+    # set, not the manual_author_action stub.
+    from line1_core import inventory, venue_engine
+
+    root = Path(__file__).resolve().parents[1]
+    entries = inventory.scan(root)
+    cases = {
+        "worldbank": ("WB-DATA-AVAILABILITY", "data_availability_statement"),
+        "apsr": ("APSR-DATA-AVAILABILITY", "data_availability_statement"),
+        "generic_dataverse": ("GEN-DV-DATA-CITATION", "data_citation"),
+        "jasa": ("JASA-REPRO-RNG", "seeded_rng"),
+    }
+    computed = {"pass", "fail", "needs_author_action"}
+    for venue, (check_id, detector) in cases.items():
+        profile = venue_engine.load_profile(venue)
+        spec = next(c for c in profile["checks"] if c["check_id"] == check_id)
+        assert spec["detector"] == detector
+        _, checks = venue_engine.run_profile(root, entries, profile)
+        c = next(x for x in checks if x.check_id == check_id)
+        assert c.status in computed
+        assert "Requires an author action that cannot be verified statically." not in c.detail
+
+
 def test_no_unbuilt_detectors_in_shipped_profiles() -> None:
     # a profile that parks a gap on `unbuilt_detector` must build the real detector (or consciously
     # demote the check) before it ships — this keeps an owed detector from rotting invisibly.

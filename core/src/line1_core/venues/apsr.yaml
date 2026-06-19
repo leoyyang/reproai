@@ -42,9 +42,15 @@ checks:
     source: "https://apsanet.org/publications/journals/american-political-science-review/guidelines-for-reproducibility/"
   - check_id: APSR-DATA-AVAILABILITY
     requirement: "Include a data availability statement; if data are restricted, explain and give access instructions before review."
-    detector: manual_author_action
+    detector: data_availability_statement
+    author_action: "Add a data availability statement to the README; for any restricted data, explain the restriction and how a reviewer can obtain access before review."
+    how: "State for each dataset whether it is public or restricted, with a source/URL; for restricted data, give the access route and contact."
+    self_check: "Every dataset the code uses is listed, and each restricted one has access instructions."
     source: "https://apsanet.org/publications/journals/american-political-science-review/apsr-submission-guidelines/"
   - check_id: APSR-DEPOSIT-DATAVERSE
     requirement: "Deposit the reproducibility package in the APSR Dataverse on Harvard Dataverse before final acceptance."
     detector: manual_author_action
+    author_action: "Deposit the full reproducibility package in the APSR Dataverse on Harvard Dataverse before final acceptance."
+    how: "Create the Dataverse record, upload the package, and link it from the manuscript."
+    self_check: "The Dataverse record holds the complete package and resolves from its DOI."
     source: "https://apsanet.org/publications/journals/american-political-science-review/guidelines-for-reproducibility/"
