@@ -182,7 +182,10 @@ body {
   border: 1px solid rgba(180,105,14,0.22); border-radius: 5px; padding: 2px 6px;
 }
 .stage-note { font-size: 13px; color: var(--ink-soft); margin-top: 3px; line-height: 1.5; }
-.stage-run { font-family: var(--mono); font-size: 10px; color: var(--ink-faint); align-self: center; letter-spacing: 0.04em; }
+/* always rendered (width reserved in every row) so the active state only toggles opacity, never
+   re-wraps the note — otherwise the active row grows a line and the page flickers on mobile */
+.stage-run { font-family: var(--mono); font-size: 10px; color: var(--ink-faint); align-self: center; letter-spacing: 0.04em; opacity: 0; transition: opacity .3s ease; }
+.stage.on .stage-run { opacity: 1; }
 
 /* evolution band — outside the per-package flow */
 .engine-evolve {
@@ -208,7 +211,7 @@ body {
 .advisory-note { margin: 12px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--ink-faint); }
 
 @media (prefers-reduced-motion: reduce) {
-  .stage { transition: none; }
+  .stage, .stage-run { transition: none; }
 }
 
 /* cards */

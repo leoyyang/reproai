@@ -62,9 +62,9 @@ export const content = {
     inputText: "A messy working directory + the draft paper",
     stages: [
       { name: "/reproai:check", note: "Static pre-diagnose — scans, applies rules + venue, writes the advisory" },
-      { name: "/reproai:comply", note: "Venue compliance checklist (AER, APSR, AJPS…)" },
+      { name: "/reproai:comply", note: "Venue compliance checklist (AER, APSR, AJPS, JASA…)" },
       { name: "/reproai:fix", note: "Rewrites the recommended fixes to a copy, re-checks" },
-      { name: "/reproai:debug", note: "Smoke-tests: does it run? tables/figures emitted?", runs: true },
+      { name: "/reproai:debug", note: "Smoke-tests: does it run? Are tables/figures emitted?", runs: true },
     ],
     outputLabel: "Output · priority-graded advisory (examples)",
     advisory: [

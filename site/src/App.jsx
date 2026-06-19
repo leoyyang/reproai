@@ -50,7 +50,7 @@ function EnginePanel() {
                 </div>
                 <div className="stage-note">{s.note}</div>
               </div>
-              {active === i && <span className="stage-run">{content.engine.working}</span>}
+              <span className="stage-run" aria-hidden={active !== i}>{content.engine.working}</span>
             </div>
           ))}
         </motion.div>
