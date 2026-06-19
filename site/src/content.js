@@ -118,7 +118,7 @@ export const content = {
           [P("❯ "), SLASH("/reload-plugins")],
           [P("$ "), CMD("pip install -U"), TXT(" \"git+https://github.com/leoyyang/reproai#subdirectory=core\"")],
         ],
-        note: "The plugin update refreshes the commands; the `pip` update refreshes the rules and venue profiles, which live in the engine.",
+        note: "Inside Claude Code, the plugin update refreshes the commands; in your terminal, `pip install -U` refreshes the rules and venue profiles, which live in the engine.",
       },
       codex: {
         title: "Update · Codex",

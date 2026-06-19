@@ -307,5 +307,18 @@ that were stubbed are now real detectors.
   above) shipped in the same build; the changelog lists it separately to keep the version sequence
   continuous.
 
+## plugin 0.4.6: correct the /reproai:update guidance (2026-06-19)
+
+Documentation fix — no rule, venue, or engine-behavior change.
+
+- `/reproai:update` (Claude command doc) now includes the engine update step,
+  `pip install -U "git+https://github.com/leoyyang/reproai#subdirectory=core"`. The Marketplace
+  `/plugin update` refreshes only the commands; the rules and venue profiles live in the Python
+  engine, so updating the plugin alone left them stale. Also dropped the "(new rules included)"
+  overclaim on the `/plugin update` line. (The Codex update skill already documented its engine
+  step, `pip install -U -e reproai/core`.)
+- Version bumped to 0.4.6 across all six version files (the Claude + Codex manifests, both
+  marketplace.json files, pyproject.toml, __init__.py).
+
 <!-- Append new entries above this line. Each entry: bump rules_version, list added/changed rule ids
      and the Line 2 lesson(s) they were promoted from. -->

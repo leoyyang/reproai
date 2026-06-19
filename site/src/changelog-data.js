@@ -31,6 +31,17 @@ export const changelog = {
 
   releases: [
     {
+      version: "0.4.6",
+      date: "June 19, 2026",
+      title: "Clearer update instructions.",
+      changes: [
+        {
+          tag: "Fixed",
+          text: "Refreshing reproai in Claude Code takes two commands, because the rules and venue profiles live in a small Python engine separate from the plugin commands: `/plugin update` updates the commands, then `pip install -U` updates the engine. The `/reproai:update` guide and the website now spell out both steps — earlier they implied `/plugin update` alone pulled new rules.",
+        },
+      ],
+    },
+    {
       version: "0.4.5",
       date: "June 19, 2026",
       title: "An honest pre-submission checklist, plus three new static checks.",
