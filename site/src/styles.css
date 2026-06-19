@@ -214,6 +214,10 @@ body {
 /* cards */
 .cards { display: grid; gap: 22px; }
 .cards.two { grid-template-columns: 1fr 1fr; }
+/* let a card shrink so a long line scrolls inside its terminal instead of widening the column */
+.cards > .card { min-width: 0; }
+.update-cards { margin-top: 22px; }
+.update-footnote { margin: 14px 0 0; font-size: 13px; line-height: 1.55; color: var(--ink-faint); }
 .cards.four { grid-template-columns: repeat(2, 1fr); }
 .card {
   position: relative;

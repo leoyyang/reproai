@@ -26,7 +26,7 @@ export const changelog = {
   head: {
     lead: "What's",
     emphasis: "new",
-    sub: "Every ReproAI release, newest first. The plugin's underlying rule set also keeps evolving as more replication packages are seen; run `/reproai:update` to pull the latest.",
+    sub: "Every ReproAI release, newest first. The plugin's underlying rule set also keeps evolving as more replication packages are seen; run `/reproai:update` to check your version and how to update.",
   },
 
   releases: [

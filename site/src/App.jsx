@@ -151,6 +151,21 @@ function Install() {
           <p className="term-note">{withCode(c.codex.note)}</p>
         </div>
       </div>
+      <div className="cards two update-cards">
+        <div className="card">
+          <span className="redline" />
+          <h3>{c.update.claude.title}</h3>
+          <Term lines={c.update.claude.lines} />
+          <p className="term-note">{withCode(c.update.claude.note)}</p>
+        </div>
+        <div className="card">
+          <span className="redline" />
+          <h3>{c.update.codex.title}</h3>
+          <Term lines={c.update.codex.lines} />
+          <p className="term-note">{withCode(c.update.codex.note)}</p>
+        </div>
+      </div>
+      <p className="update-footnote">{withCode(c.update.footnote)}</p>
     </section>
   );
 }

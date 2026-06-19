@@ -61,14 +61,18 @@ rule set is generic guidance and names no specific paper.
 
 ## Install
 
+ReproAI has two parts: the **plugin** (the slash commands) and a small **Python engine, 3.10+**
+(`reproai` CLI) that the commands call and that holds the rules and venue profiles. Install both.
+
 **Claude Code**
 
 ```
 /plugin marketplace add leoyyang/reproai
-/plugin install reproai@reproai
+/plugin install reproai@reproai                                          # plugin@marketplace
+pip install "git+https://github.com/leoyyang/reproai#subdirectory=core"  # the engine, on PATH
 ```
 
-Installs globally — then run `/reproai:check` in any project that contains your replication package.
+Both install globally — then run `/reproai:check` in any project that contains your replication package.
 
 **OpenAI Codex**
 
@@ -76,10 +80,33 @@ Installs globally — then run `/reproai:check` in any project that contains you
 git clone https://github.com/leoyyang/reproai
 cd reproai
 ./codex-plugin/install.sh   # links the reproai skills into ~/.agents/skills
-pip install -e core         # put the reproai CLI on PATH
+pip install -e core         # put the reproai engine on PATH
 ```
 
 Then ask Codex for `/reproai-check` in any project.
+
+## Update
+
+Rules and venue profiles live in the engine, so refresh **both** the plugin (commands) and the engine.
+
+**Claude Code**
+
+```
+/plugin marketplace update reproai
+/plugin update reproai                                                      # latest commands
+/reload-plugins
+pip install -U "git+https://github.com/leoyyang/reproai#subdirectory=core"  # latest rules + venues
+```
+
+**OpenAI Codex**
+
+```
+git -C reproai pull
+reproai/codex-plugin/install.sh                                             # relink skills
+pip install -U -e reproai/core                                              # latest rules + venues
+```
+
+`/reproai:update` reports your installed version and these steps; it does not update anything itself.
 
 ## Layout
 
