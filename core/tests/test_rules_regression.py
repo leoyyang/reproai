@@ -159,6 +159,137 @@ def test_priority_sorting(messy_pkg: Path) -> None:
     assert priorities == sorted(priorities), "advisory items are not priority-sorted"
 
 
+def test_c7_fires_on_dopar_without_dorng(tmp_path: Path) -> None:
+    pkg = tmp_path / "par_bad"
+    pkg.mkdir()
+    (pkg / "boot.R").write_text(
+        "library(doParallel)\nregisterDoParallel(4)\n"
+        "out <- foreach(i = 1:1000, .combine = rbind) %dopar% { mean(sample(x, replace = TRUE)) }\n",
+        encoding="utf-8",
+    )
+    assert "C7-nonreproducible-parallel-rng" in _rules_fired(pkg)
+
+
+def test_c7_silent_with_dorng(tmp_path: Path) -> None:
+    pkg = tmp_path / "par_ok"
+    pkg.mkdir()
+    (pkg / "boot.R").write_text(
+        "library(doRNG)\nregisterDoRNG(123)\n"
+        "out <- foreach(i = 1:1000, .combine = rbind) %dopar% { mean(sample(x, replace = TRUE)) }\n",
+        encoding="utf-8",
+    )
+    assert "C7-nonreproducible-parallel-rng" not in _rules_fired(pkg)
+
+
+def test_d5_fires_on_divergent_readmes(tmp_path: Path) -> None:
+    pkg = tmp_path / "dup"
+    (pkg / "code").mkdir(parents=True)
+    (pkg / "ReadMe.pdf").write_bytes(b"%PDF-1.4 draft one")
+    (pkg / "code" / "paper2015_ReadMe.pdf").write_bytes(b"%PDF-1.4 draft two")
+    assert "D5-duplicate-readme" in _rules_fired(pkg)
+
+
+def test_d5_silent_on_md_pdf_pair(tmp_path: Path) -> None:
+    # a README.md plus its rendered README.pdf at the same location is one document, not a duplicate
+    pkg = tmp_path / "pair"
+    pkg.mkdir()
+    (pkg / "README.md").write_text("# readme\n", encoding="utf-8")
+    (pkg / "README.pdf").write_bytes(b"%PDF-1.4 rendered")
+    assert "D5-duplicate-readme" not in _rules_fired(pkg)
+
+
+def test_d6_fires_on_readme_missing_path(tmp_path: Path) -> None:
+    pkg = tmp_path / "rm"
+    pkg.mkdir()
+    (pkg / "a.R").write_text("x <- 1\n", encoding="utf-8")
+    (pkg / "README.md").write_text("Run `a.R`. See the `tutorial/` folder for details.\n", encoding="utf-8")
+    assert "D6-readme-missing-paths" in _rules_fired(pkg)
+
+
+def test_d6_silent_when_paths_resolve(tmp_path: Path) -> None:
+    pkg = tmp_path / "rm_ok"
+    (pkg / "code").mkdir(parents=True)
+    (pkg / "code" / "a.R").write_text("x <- 1\n", encoding="utf-8")
+    (pkg / "README.md").write_text("Run `code/a.R` to reproduce.\n", encoding="utf-8")
+    assert "D6-readme-missing-paths" not in _rules_fired(pkg)
+
+
+def test_readme_scaffold_assembles_from_structure(tmp_path: Path) -> None:
+    pkg = tmp_path / "scaf"
+    (pkg / "code").mkdir(parents=True)
+    (pkg / "master.R").write_text("source('code/1_prepare.R')\n", encoding="utf-8")
+    (pkg / "code" / "1_prepare.R").write_text("library(readr)\n", encoding="utf-8")
+    out = coordinator.readme_scaffold(pkg)
+    assert "# Replication package" in out
+    assert "master.R" in out and "master script" in out
+    assert "readr" in out  # detected dependency
+    assert "[CONFIRM" in out  # author-only fields are marked, not invented
+
+
+def test_cli_readme_scaffold_runs(tmp_path: Path, capsys) -> None:
+    from line1_core import cli
+    pkg = tmp_path / "c"
+    pkg.mkdir()
+    (pkg / "a.R").write_text("x <- 1\n", encoding="utf-8")
+    rc = cli.main(["readme", str(pkg), "--scaffold"])
+    assert rc == 0
+    assert "# Replication package" in capsys.readouterr().out
+
+
+def test_a13_fires_on_dead_script(tmp_path: Path) -> None:
+    pkg = tmp_path / "orphan"
+    (pkg / "code").mkdir(parents=True)
+    (pkg / "master.R").write_text("source('code/a.R')\n", encoding="utf-8")
+    (pkg / "code" / "a.R").write_text("x <- 1\n", encoding="utf-8")
+    (pkg / "code" / "scratch_old.R").write_text("y <- 2\n", encoding="utf-8")
+    assert "A13-unreferenced-script" in _rules_fired(pkg)
+
+
+def test_a13_silent_on_named_helper(tmp_path: Path) -> None:
+    # helpers.R is named (sourced) in a.R, so it is not a stray script even if the edge is unresolved
+    pkg = tmp_path / "helper"
+    (pkg / "code").mkdir(parents=True)
+    (pkg / "master.R").write_text("source('code/a.R')\n", encoding="utf-8")
+    (pkg / "code" / "a.R").write_text("source('code/helpers.R')\nx <- 1\n", encoding="utf-8")
+    (pkg / "code" / "helpers.R").write_text("f <- function() 1\n", encoding="utf-8")
+    assert "A13-unreferenced-script" not in _rules_fired(pkg)
+
+
+def test_a13_silent_without_master(tmp_path: Path) -> None:
+    # no sourcing structure at all -> A1/A11 own this, A13 must not pile on
+    pkg = tmp_path / "nomaster"
+    pkg.mkdir()
+    (pkg / "a.R").write_text("x <- 1\n", encoding="utf-8")
+    (pkg / "b.R").write_text("y <- 2\n", encoding="utf-8")
+    assert "A13-unreferenced-script" not in _rules_fired(pkg)
+
+
+def test_n5_fires_on_unsafe_filename(tmp_path: Path) -> None:
+    pkg = tmp_path / "fn"
+    pkg.mkdir()
+    (pkg / "a.R").write_text("x <- 1\n", encoding="utf-8")
+    (pkg / "raw data (final).csv").write_text("a\n1\n", encoding="utf-8")
+    assert "N5-unsafe-filename" in _rules_fired(pkg)
+
+
+def test_n5_silent_on_clean_filenames(tmp_path: Path) -> None:
+    pkg = tmp_path / "fn_ok"
+    (pkg / "code").mkdir(parents=True)
+    (pkg / "code" / "01_prepare.R").write_text("x <- 1\n", encoding="utf-8")
+    (pkg / "data").mkdir()
+    (pkg / "data" / "raw_data.csv").write_text("a\n1\n", encoding="utf-8")
+    assert "N5-unsafe-filename" not in _rules_fired(pkg)
+
+
+def test_scaffold_includes_crosswalk(tmp_path: Path) -> None:
+    pkg = tmp_path / "cw"
+    pkg.mkdir()
+    (pkg / "a.do").write_text('use d.dta\n* Table 1\nreg y x\nesttab using "output/tables/t1.tex"\n', encoding="utf-8")
+    out = coordinator.readme_scaffold(pkg)
+    assert "## Results map" in out and "| Output | Produced by | Saved to |" in out
+    assert "## Last verified" in out
+
+
 def test_no_reproducibility_verdict(messy_pkg: Path) -> None:
     result = coordinator.check(messy_pkg, "aea")
     blob = str(result).upper()

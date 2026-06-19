@@ -31,6 +31,25 @@ export const changelog = {
 
   releases: [
     {
+      version: "0.4.1",
+      date: "June 18, 2026",
+      title: "A venue for JASA, plus reproducible runs and README tools.",
+      changes: [
+        {
+          tag: "New",
+          text: "JASA venue profile (Journal of the American Statistical Association): its README template with a results-to-be-replicated map, the data and code availability form, a master script, the computing environment, a license, and where to deposit the package.",
+        },
+        {
+          tag: "New",
+          text: "A check for reproducible parallel results: it flags a parallel loop that draws random numbers without a fixed, reproducible stream, so your bootstrap and simulation numbers come out the same on every run.",
+        },
+        {
+          tag: "Improved",
+          text: "README tooling: the checks now read PDF READMEs (not just Markdown), flag duplicate or divergent README files, warn when a README points to a file that is not in the package, and a new helper drafts a README from your package's own structure.",
+        },
+      ],
+    },
+    {
       version: "0.4.0",
       date: "June 17, 2026",
       title: "Smoke-testing, and a venue for the Econometric Society.",

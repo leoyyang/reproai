@@ -43,3 +43,13 @@ def check(root: Path, venue: str | None) -> dict[str, Any]:
             "priority_violations": priority_violations,
         },
     }
+
+
+def readme_scaffold(root: Path) -> str:
+    """Assemble a README.md draft from the package's structure (file map, run order, table map,
+    detected packages), with [CONFIRM] markers for author-only fields. Static; runs no author code."""
+    root = root.resolve()
+    entries = inventory.scan(root)
+    edges = dependency_graph.build(root, entries)
+    exports = stata_esttab_parser.parse(root, entries)
+    return reports.readme_scaffold(root, entries, edges, exports)

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+from pathlib import Path
 from typing import Any
 
 from . import GENERATED_BY
@@ -160,6 +162,116 @@ def venue_compliance_report(root, meta: dict[str, Any], checks: list[Check]) -> 
             for c in checks
         ],
     }
+
+
+# --- README scaffold (issue #3 item 2) ---------------------------------------------------------
+# Emit a README.md DRAFT assembled from the structured facts the engine already computes (file map,
+# run order, table->command map, detected packages), so the author edits a scaffold instead of
+# commissioning one from scratch. Fields the static scan cannot know are marked [CONFIRM].
+
+_PKG_R = re.compile(r'\b(?:library|require)\s*\(\s*["\']?([A-Za-z][\w.]*)')
+_PKG_STATA = re.compile(r'\b(?:ssc\s+install|net\s+install)\s+(\w+)', re.IGNORECASE)
+_PKG_PY = re.compile(r'^\s*(?:import|from)\s+([A-Za-z_]\w*)', re.MULTILINE)
+_LANG_LABEL = {"r": "R", "stata": "Stata", "python": "Python"}
+
+
+def _file_role(path: str, language: str) -> str:
+    name = Path(path).name.lower()
+    if any(t in name for t in ("master", "run_all", "runall", "main", "00_", "_00")):
+        return "master script (runs the full package)"
+    if language == "data":
+        return "data file"
+    if language == "doc":
+        return "documentation"
+    if language in {"stata", "r", "python"}:
+        if any(t in name for t in ("prepare", "clean", "build", "merge", "import", "01_", "1_")):
+            return f"{_LANG_LABEL.get(language, language)} script (data preparation)"
+        if any(t in name for t in ("analy", "estimat", "table", "figure", "result", "regress", "plot")):
+            return f"{_LANG_LABEL.get(language, language)} script (analysis / outputs)"
+        if any(t in name for t in ("function", "util", "helper", "lib")):
+            return f"{_LANG_LABEL.get(language, language)} helper functions"
+        return f"{_LANG_LABEL.get(language, language)} script"
+    return language
+
+
+def readme_scaffold(root, entries: list[FileEntry], edges: list[Edge], exports: list[TableExport]) -> str:
+    from .dependency_graph import entry_points as _entry_points
+
+    eps = _entry_points(entries, edges)
+    scripts = [e for e in entries if e.language in {"stata", "r", "python"}]
+
+    pkgs: set[str] = set()
+    for e in scripts:
+        try:
+            text = (Path(root) / e.path).read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        if e.language == "r":
+            pkgs |= set(_PKG_R.findall(text))
+        elif e.language == "stata":
+            pkgs |= set(_PKG_STATA.findall(text))
+        elif e.language == "python":
+            pkgs |= set(_PKG_PY.findall(text))
+
+    L: list[str] = []
+    L.append("# Replication package for [CONFIRM: paper title]")
+    L.append("")
+    L.append("> Draft scaffolded by reproai from the package structure. Fields marked **[CONFIRM]** are")
+    L.append("> author inputs the static scan cannot determine; fill them in and verify the rest.")
+    L.append("")
+    L.append("## Overview")
+    L.append("[CONFIRM: one or two sentences on what the code does and what it produces.]")
+    L.append("")
+    L.append("## Data sources and availability")
+    L.append("[CONFIRM: list each dataset with its source/citation and whether it is public.]")
+    L.append("[CONFIRM: for any restricted dataset, note who owns it, why it is restricted, which scripts use it,")
+    L.append(" which public file stands in for it here, and whether the published results can still be reproduced without it.]")
+    L.append("")
+    L.append("## Files")
+    for e in sorted(entries, key=lambda x: x.path):
+        if e.language in {"stata", "r", "python", "data", "doc"}:
+            L.append(f"- `{e.path}` --- {_file_role(e.path, e.language)}")
+    L.append("")
+    L.append("## Software and dependencies")
+    langs = sorted({e.language for e in scripts})
+    lang_label = ", ".join(_LANG_LABEL.get(x, x) for x in langs) if langs else "[CONFIRM]"
+    L.append(f"- Language(s) detected: {lang_label} --- [CONFIRM: exact version, e.g. R 4.4.2 / Stata 18]")
+    if pkgs:
+        L.append(f"- Packages detected: {', '.join(sorted(pkgs))} --- [CONFIRM: pin the versions used]")
+    else:
+        L.append("- Packages: [CONFIRM: list packages and the versions used]")
+    L.append("- [CONFIRM: expected run-time, memory, and number of cores.]")
+    L.append("")
+    L.append("## How to run")
+    if eps:
+        for i, ep in enumerate(eps, start=1):
+            L.append(f"{i}. Run `{ep['path']}` ({ep['reason']}).")
+    else:
+        L.append("[CONFIRM: state the run order --- a master script, or the numbered scripts in sequence.]")
+        for e in sorted(scripts, key=lambda x: x.path):
+            L.append(f"   - `{e.path}`")
+    L.append("")
+    if exports:
+        L.append("## Results map")
+        L.append("[CONFIRM the paper's table/figure number per row, and add a LaTeX label or log file if your venue asks for one.]")
+        L.append("")
+        L.append("| Output | Produced by | Saved to |")
+        L.append("|---|---|---|")
+        for x in sorted(exports, key=lambda t: str(t.table)):
+            loc = f"{x.source_file}:{x.line}" if x.line else x.source_file
+            out = f"`{x.output_path}`" if x.output_path else "[CONFIRM]"
+            L.append(f"| {x.table} | `{loc}` | {out} |")
+        L.append("")
+    L.append("## License")
+    L.append("[CONFIRM: state the license; include a LICENSE file in the package.]")
+    L.append("")
+    L.append("## Last verified")
+    L.append("[CONFIRM: the date you last re-ran the whole package from a clean session, and that it reproduced these results.]")
+    L.append("")
+    L.append("## Notes")
+    L.append("[CONFIRM: anything else a replicator needs --- seeds, hardware, known caveats.]")
+    L.append("")
+    return "\n".join(L)
 
 
 def risk_register(root, advisory: dict[str, Any], checks: list[Check]) -> dict[str, Any]:

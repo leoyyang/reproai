@@ -39,10 +39,43 @@ def load_profile(venue: str) -> dict[str, Any]:
 
 
 def _root_readme(root: Path) -> Path | None:
-    for name in ("README.pdf", "Readme.pdf", "readme.pdf"):
-        if (root / name).exists():
-            return root / name
+    # Case-insensitive: JASA's own template ships "ReadMe.pdf", which a case-sensitive
+    # filesystem (Linux CI, where reproducibility checks run) would otherwise miss.
+    try:
+        for child in root.iterdir():
+            if child.is_file() and child.name.lower() == "readme.pdf":
+                return child
+    except OSError:
+        return None
     return None
+
+
+def _license_at_root(root: Path) -> str | None:
+    names = {"license", "license.md", "license.txt", "licence", "licence.md", "licence.txt", "copying"}
+    try:
+        for child in root.iterdir():
+            if child.is_file() and child.name.lower() in names:
+                return child.name
+    except OSError:
+        return None
+    return None
+
+
+def _pdftotext(path: Path) -> str | None:
+    """Extract text from a PDF README via poppler's `pdftotext`, when available. Reading a document is
+    not executing author code. Returns None on any failure (no poppler, extraction error) so the caller
+    falls back gracefully — no hard dependency is introduced."""
+    import shutil
+    import subprocess
+
+    exe = shutil.which("pdftotext")
+    if exe is None:
+        return None
+    try:
+        proc = subprocess.run([exe, "-q", str(path), "-"], capture_output=True, text=True, timeout=20)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return proc.stdout if proc.returncode == 0 else None
 
 
 def _has_master(entries: list[FileEntry]) -> bool:
@@ -104,20 +137,43 @@ def run(root: Path, entries: list[FileEntry], venue: str) -> tuple[dict[str, Any
             add(spec, "pass" if readme else "fail",
                 "README.pdf at root" if readme else "No README.pdf in the uppermost directory.",
                 [readme.name] if readme else [])
+        elif detector == "readme_at_root":
+            # softer than readme_pdf_at_root: any README at root passes; PDF is recommended, not required
+            pdf = _root_readme(root)
+            md = next((e.path for e in entries if Path(e.path).name.lower() in {"readme.md", "readme.txt"}), None)
+            if pdf:
+                add(spec, "pass", f"README present at root ({pdf.name}).", [pdf.name])
+            elif md:
+                add(spec, "needs_author_action", "README present, but the JASA template ships ReadMe.pdf; export a PDF copy.", [md])
+            else:
+                add(spec, "fail", "No README at the package root.", [])
         elif detector == "readme_has_sections":
+            # a profile may override the section hints to match its own README template
+            hints = profile.get("readme_sections") or _README_SECTION_HINTS
             readme = _root_readme(root)
             md = next((e.path for e in entries if Path(e.path).name.lower() in {"readme.md", "readme.txt"}), None)
-            if readme is None and md is None:
-                add(spec, "fail", "No README found to check sections.", [])
-            elif md is not None:
+            # prefer a plain-text README; otherwise read the PDF's text so its sections count too
+            text = None
+            src = None
+            if md is not None:
                 text = (root / md).read_text(encoding="utf-8", errors="replace").lower()
-                missing = [h for h in _README_SECTION_HINTS if h not in text]
+                src = md
+            elif readme is not None:
+                extracted = _pdftotext(readme)
+                if extracted is not None:
+                    text = extracted.lower()
+                    src = readme.name
+            if text is not None:
+                missing = [h for h in hints if h not in text]
                 add(spec, "pass" if not missing else "needs_author_action",
                     "All key sections present." if not missing else f"Missing sections: {', '.join(missing)}.",
-                    [md])
+                    [src])
+            elif readme is not None:
+                add(spec, "needs_author_action",
+                    "README.pdf present but its text could not be extracted (install poppler's pdftotext to auto-check sections).",
+                    [readme.name])
             else:
-                evidence = [readme.name] if readme is not None else []
-                add(spec, "needs_author_action", "README.pdf present; section content not statically inspectable.", evidence)
+                add(spec, "fail", "No README found to check sections.", [])
         elif detector == "has_master_script":
             ok = _has_master(entries)
             add(spec, "pass" if ok else "needs_author_action",
@@ -140,6 +196,11 @@ def run(root: Path, entries: list[FileEntry], venue: str) -> tuple[dict[str, Any
             else:
                 add(spec, "pass" if n <= limit else "needs_author_action",
                     f"{n} files (limit {limit}; zip if exceeded).", [])
+        elif detector == "license_at_root":
+            lic = _license_at_root(root)
+            add(spec, "pass" if lic else "fail",
+                f"License file present ({lic})." if lic else "No LICENSE file at the package root.",
+                [lic] if lic else [])
         elif detector == "manual_author_action":
             add(spec, "needs_author_action", "Requires an author action that cannot be verified statically.", [])
         else:

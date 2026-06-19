@@ -52,6 +52,10 @@ _LEGACY_MIXED = re.compile(r'^\s*(?:xi:\s*)?(xtmelogit|xtmepoisson|meqrlogit|meq
 _CD_EMPTY = re.compile(r'^\s*cd\s+""\s*$', re.IGNORECASE)
 _OLD_MERGE = re.compile(r'^\s*merge\s+(?![0-9m]+\s*:\s*[0-9m]+)([A-Za-z_]\w*)\b[^\r\n]*\busing\b', re.IGNORECASE)
 _DEPRECATED_R_PKG = re.compile(r'\blibrary\s*\(\s*["\']?(rgdal|rgeos|maptools|ZeligMultilevel|Zelig|checkpoint|hrbrthemes|arm)\b', re.IGNORECASE)
+# C7: non-reproducible parallel RNG. `%dopar%` advances a fresh stream per worker;
+# doRNG (`%dorng%` or `registerDoRNG(seed)`) is what makes the loop reproducible.
+_PAR_DOPAR = re.compile(r'%dopar%')
+_PAR_REPRO = re.compile(r'%dorng%|registerDoRNG', re.IGNORECASE)
 _RMD_CHUNK = re.compile(r'^\s*```\s*\{[rR]')
 _R_IN_DO = re.compile(r'(\blibrary\s*\([A-Za-z]|\b\w+\s*<-\s|\bcollin\b)')
 _KNOWN_USER_ADO = {
@@ -324,6 +328,16 @@ def _detect_deprecated_r_pkg(path: str, text: str) -> list[dict[str, Any]]:
     return hits
 
 
+def _detect_nonreproducible_parallel_rng(path: str, text: str) -> list[dict[str, Any]]:
+    masked = _mask_r_strings_comments(text)
+    if not _PAR_DOPAR.search(masked) or _PAR_REPRO.search(masked):
+        return []
+    for i, line in enumerate(text.splitlines(), start=1):
+        if _PAR_DOPAR.search(_mask_r_strings_comments(line)):
+            return [_ev(path, i, line)]
+    return []
+
+
 def _detect_rmd_chunk(path: str, text: str) -> list[dict[str, Any]]:
     for i, line in enumerate(text.splitlines(), start=1):
         if _RMD_CHUNK.match(line):
@@ -553,6 +567,118 @@ def _detect_intermediate_data(root: Path, path: str, text: str, edges: list[Edge
     return hits
 
 
+def _detect_duplicate_readmes(root: Path) -> list[dict[str, Any]]:
+    # group README-like files by (folder, stem): a same-name README.md + README.pdf is ONE document
+    # in two formats (not flagged); distinct names or folders are separate drafts that can diverge.
+    groups: dict[tuple[str, str], list[str]] = {}
+    for p in root.rglob("*"):
+        if not p.is_file():
+            continue
+        rel = p.relative_to(root)
+        if any(part.startswith(".") for part in rel.parts):
+            continue
+        if "readme" in p.name.lower() and p.suffix.lower() in {".md", ".txt", ".pdf", ".rst"}:
+            groups.setdefault((rel.parent.as_posix(), p.stem.lower()), []).append(rel.as_posix())
+    if len(groups) <= 1:
+        return []
+    return [_ev(sorted(paths)[0]) for paths in groups.values()]
+
+
+# D6: README references a path that isn't in the package. Conservative — only backtick-quoted path
+# tokens in a markdown/text README (an author who writes `code/x.R` or `data/` in backticks means a
+# real path). Folder-tree diagrams, prose, and PDF-extracted text never trigger it, so an illustrative
+# tree root like `replication/` is not mistaken for a missing folder.
+_README_PATHISH_EXT = (
+    ".r", ".do", ".py", ".csv", ".dta", ".rds", ".rdata", ".xlsx", ".xls", ".sav",
+    ".txt", ".tsv", ".parquet", ".ipynb", ".sql", ".rmd", ".qmd",
+)
+_README_BACKTICK = re.compile(r'`([^`\n]{1,80})`')
+
+
+def _readme_pathish(tok: str) -> bool:
+    tok = tok.strip()
+    if not tok or " " in tok or "://" in tok:
+        return False
+    if tok.startswith(("http", "www.", "#", "@", "-", "$", "~")):
+        return False
+    if any(c in tok for c in "()=*<>|\"'{}!?,;"):
+        return False
+    return tok.endswith("/") or tok.lower().endswith(_README_PATHISH_EXT)
+
+
+def _detect_readme_missing_paths(root: Path) -> list[dict[str, Any]]:
+    readme = None
+    try:
+        for p in root.iterdir():
+            if p.is_file() and p.name.lower() in {"readme.md", "readme.txt"}:
+                readme = p
+                break
+    except OSError:
+        return []
+    if readme is None:
+        return []
+    try:
+        text = readme.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return []
+
+    rels: set[str] = set()
+    names: set[str] = set()
+    for p in root.rglob("*"):
+        rel = p.relative_to(root)
+        if any(part.startswith(".") for part in rel.parts):
+            continue
+        rels.add(rel.as_posix().lower())
+        names.add(p.name.lower())
+
+    def resolves(tok: str) -> bool:
+        rel = tok.strip().strip("`").lstrip("./").rstrip("/").lower()
+        return not rel or rel in rels or Path(rel).name in names
+
+    seen: set[str] = set()
+    hits: list[dict[str, Any]] = []
+    for m in _README_BACKTICK.finditer(text):
+        tok = m.group(1).strip()
+        if tok in seen:
+            continue
+        seen.add(tok)
+        if _readme_pathish(tok) and not resolves(tok):
+            hits.append(_ev(readme.name, None, f"README references `{tok}` but it is not in the package"))
+    return hits[:8]
+
+
+# A13: a code file that nothing runs, once a master/sourcing structure is present.
+def _detect_unreferenced_scripts(entries: list[FileEntry], edges: list[Edge], texts: dict[str, str]) -> list[dict[str, Any]]:
+    callers = {e.src for e in edges if e.kind in {"do", "source"}}
+    if not callers:  # no run structure at all -> A1/A11 own that case, not this rule
+        return []
+    referenced = {e.dst for e in edges if e.kind in {"do", "source"} and e.resolved}
+    hits: list[dict[str, Any]] = []
+    for path in sorted(p for p in texts):
+        if path in referenced or path in callers:
+            continue
+        base = Path(path).name
+        # a helper sourced via a path the graph could not resolve still has its name typed elsewhere
+        if any(base in other for q, other in texts.items() if q != path):
+            continue
+        hits.append(_ev(path))
+    return hits[:8]
+
+
+# N5: a filename a shell or another tool will choke on.
+_UNSAFE_FILENAME = re.compile(r"""[ &;|()$`'"*?<>]""")
+
+
+def _detect_unsafe_filenames(root: Path, entries: list[FileEntry]) -> list[dict[str, Any]]:
+    hits: list[dict[str, Any]] = []
+    for e in entries:
+        if e.language in {"stata", "r", "python", "data"}:
+            name = Path(e.path).name
+            if _UNSAFE_FILENAME.search(name):
+                hits.append(_ev(e.path, None, "filename has a space or a shell-unsafe character"))
+    return hits[:8]
+
+
 def run(root: Path, entries: list[FileEntry], edges: list[Edge], table_exports) -> list[Finding]:
     root = root.resolve()
     rules = {r["id"]: r for r in load_rules()}
@@ -609,6 +735,18 @@ def run(root: Path, entries: list[FileEntry], edges: list[Edge], table_exports) 
             detail = "no README" if not doc_files else f"{len(undocumented)} of {n_files} files not described in any README"
             emit("D4-per-file-documentation", [_ev(p) for p in sorted(undocumented)][:8],
                  f"{detail}; per-file documentation (purpose, inputs/outputs, codebook) missing.")
+
+    emit("D5-duplicate-readme", _detect_duplicate_readmes(root),
+         "Multiple distinct README documents (different names or folders) that can diverge and mislead a replicator.")
+
+    emit("D6-readme-missing-paths", _detect_readme_missing_paths(root),
+         "README references files or folders that are not present in the package.")
+
+    emit("A13-unreferenced-script", _detect_unreferenced_scripts(entries, edges, texts),
+         "A code file is never run by the master or any other script and is not named anywhere else.")
+
+    emit("N5-unsafe-filename", _detect_unsafe_filenames(root, entries),
+         "A script or data filename contains a space or a character that breaks shells and tools.")
 
     for path, text in texts.items():
         lang = _lang_of(entries, path)
@@ -692,6 +830,8 @@ def run(root: Path, entries: list[FileEntry], edges: list[Edge], table_exports) 
                 emit("C1-pin-deps", [_ev(path, line_no, line)], "Unpinned direct-from-source install.")
             emit("C5-deprecated-r-packages", _detect_deprecated_r_pkg(path, text),
                  "Removed/deprecated R package loaded at top halts the whole script.")
+            emit("C7-nonreproducible-parallel-rng", _detect_nonreproducible_parallel_rng(path, text),
+                 "Parallel %dopar% loop without doRNG/registerDoRNG draws a different RNG stream each run.")
             emit("B11-rmd-chunk-in-r", _detect_rmd_chunk(path, text),
                  "R Markdown ```{r} chunk markers in a .R file cause a parse error.")
             emit("B8-r-table-call-syntax", _detect_r_table_syntax(path, text),

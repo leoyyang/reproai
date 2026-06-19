@@ -24,7 +24,7 @@ def test_report_matches_schema(messy_pkg: Path, key: str, schema_file: str) -> N
     jsonschema.validate(instance=result[key], schema=schema)
 
 
-@pytest.mark.parametrize("venue", ["aea", "econsoc", "apsr", "ajps", "jop", "generic_dataverse", "generic_openicpsr"])
+@pytest.mark.parametrize("venue", ["aea", "econsoc", "apsr", "ajps", "jop", "jasa", "generic_dataverse", "generic_openicpsr"])
 def test_all_venue_profiles_run(messy_pkg: Path, venue: str) -> None:
     result = coordinator.check(messy_pkg, venue)
     vc = result["venue_compliance_report"]

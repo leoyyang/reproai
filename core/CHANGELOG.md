@@ -136,5 +136,81 @@ coefficients and never issues a reproducibility verdict.
   encouraged; one-month deposit window; five-year preservation for exempted restricted data. Reuses
   the existing detector set (no engine change); added to the venue-profile test matrix.
 
+## rules_version 2026.06.18: reproducible parallel RNG (C7)
+
+- Added `C7-nonreproducible-parallel-rng` (P1, propose_only). An R file using a `foreach(...) %dopar%`
+  loop (or a doParallel backend) without doRNG (`%dorng%` / `registerDoRNG`) draws a different RNG
+  stream per worker, so bootstrap and simulation results are not reproducible. Target form: doRNG.
+  From a JASA referee on the `fdid_paper` package, who flagged exactly this and required a re-run of
+  Table 1. Rule count 36 -> 37.
+
+## venue profile: add `jasa` (JASA) (2026-06-18)
+
+- Added the `jasa` venue profile (profile_version 2026-06-18), 10 checks, for the Journal of the
+  American Statistical Association (Applications & Case Studies, and Theory & Methods with original
+  submission on or after 2021-09-01), per the JASA Reproducibility Guide
+  (jasa-acs.github.io/repro-guide): ACC form, JASA template README (with a results-to-be-replicated
+  map), master script, declared environment and cores, relative paths, raw-to-analysis preprocessing,
+  LICENSE, reproducible RNG (rule C7), and deposit to a Git repo plus reproducibility_materials.zip.
+- Small engine refinements so the profile is correct on real JASA packages: case-insensitive README
+  detection (the JASA template ships `ReadMe.pdf`, which the case-sensitive detector missed); a
+  profile-supplied `readme_sections` override (JASA's template uses "Results to be Replicated", not
+  the default hints); a soft `readme_at_root` detector (PDF recommended, not a hard fail); and a
+  `license_at_root` detector (a referee flagged a missing LICENSE). Added `jasa` to the venue-profile
+  test matrix.
+
+## plugin 0.4.1: JASA venue, reproducible-RNG rule, README workflow (2026-06-18)
+
+- Bumped the plugin to 0.4.1 (Claude marketplace and manifest; Codex manifest brought up from 0.3.0
+  to match) for the new `jasa` venue, the C7 reproducible-parallel-RNG rule, and the issue #3 README
+  improvements below.
+
+## README workflow: read PDF READMEs + flag duplicate READMEs (issue #3, 2026-06-18)
+
+Partial resolution of issue #3 (streamline the README workflow), items (1) and (3):
+
+- The venue README-sections check now READS PDF READMEs. When a package ships no markdown/text README,
+  the engine extracts the PDF text via poppler's `pdftotext` (graceful fallback when poppler is absent)
+  and checks it against the section checklist, instead of returning a non-actionable "section content
+  not statically inspectable". Verified on the JASA `fdid_paper` package with its markdown README
+  removed: the PDF's sections are now credited.
+- Added `D5-duplicate-readme` (P2, propose_only). Flags multiple distinct README documents (different
+  names or folders) that can diverge and mislead a replicator; a same-name `README.md` + `README.pdf`
+  pair counts as one document and is not flagged. From issue #3, where an APSR package shipped two
+  divergent README drafts. Rule count 37 -> 38.
+- Issue #3 items (2), (4), (5) are addressed in the next entry.
+
+## README workflow: scaffold generator, missing-path check, PDF render (issue #3, 2026-06-18)
+
+Remainder of issue #3 (items 2, 4, 5):
+
+- (2) `reproai readme --scaffold` emits a README.md DRAFT assembled from the package's own structure:
+  a file manifest with inferred roles, the run order (entry/master scripts), a results map
+  (table/figure -> source:line -> output), and the detected language and packages. Author-only fields
+  are marked `[CONFIRM]`; nothing is invented. The engine emits the draft deterministically instead of
+  delegating README authoring to free text. Verified on the `fdid_paper` package.
+- (4) Added `D6-readme-missing-paths` (P3, propose_only). Flags a backtick-quoted README path (a folder
+  ending in `/` or a file with a code/data extension) that does not resolve to anything in the package.
+  Only backtick-quoted tokens are checked, so folder-tree diagrams and prose never false-fire (verified
+  clean on the `fdid_paper` README, whose tree names an illustrative `replication/` root). Rule count
+  38 -> 39.
+- (5) `reproai readme --render` renders `README.md` to PDF via pandoc (and prints the one-liner if
+  pandoc is absent), so keeping the markdown and PDF READMEs in sync is one command.
+
+## packaging checks from a best-practice review (2026-06-18)
+
+Additions distilled from reviewing external replication-package best-practice guidance (the source is
+credited in the GitHub README's "Recommended reading" section):
+
+- Added `A13-unreferenced-script` (P2, propose_only). When a package has a master/sourcing structure,
+  flags a code file that nothing runs and whose name appears in no other script (a likely exploratory
+  or obsolete leftover). A helper sourced via a path the scan could not resolve is not flagged, since
+  its name still appears in the caller. Stays silent on the `fdid_paper` package.
+- Added `N5-unsafe-filename` (P3, propose_only). Flags a script or data filename with a space or a
+  shell-unsafe character that breaks command-line runs and master scripts.
+- README scaffold upgrades: the results section is now a crosswalk table (output / produced-by /
+  saved-to), plus a data-sources-and-availability block that prompts for restricted-data details and a
+  "Last verified" line. Rule count 39 -> 41.
+
 <!-- Append new entries above this line. Each entry: bump rules_version, list added/changed rule ids
      and the Line 2 lesson(s) they were promoted from. -->

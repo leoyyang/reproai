@@ -184,7 +184,7 @@ export const content = {
       },
       {
         q: "Which venues does it support?",
-        a: "It ships profiles for AEA (AER, AEJ, JEL, JEP), the Econometric Society (Econometrica, QE, TE), APSR, AJPS, and JOP, plus generic Dataverse and openICPSR fallbacks. Profiles are data files, so the list grows over time.",
+        a: "It ships profiles for AEA (AER, AEJ, JEL, JEP), the Econometric Society (Econometrica, QE, TE), JASA (Journal of the American Statistical Association), APSR, AJPS, and JOP, plus generic Dataverse and openICPSR fallbacks. Profiles are data files, so the list grows over time.",
       },
       {
         q: "What does P0–P4 mean?",

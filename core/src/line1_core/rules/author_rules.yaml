@@ -200,6 +200,19 @@ rules:
     target_form: "Rewrite to `merge <cardinality> <keyvars> using <file>` where cardinality (1:1 / m:1 / 1:m) matches the ORIGINAL join the author intended. The key variables and using-file must stay identical."
     lossless_note: "May only modernize the merge SYNTAX. The join cardinality (1:1/m:1/1:m) must reflect the original relationship — if it cannot be determined unambiguously from the data structure, do NOT auto-apply, describe it instead. Must not change key variables, the using file, or unmatched-observation handling. Choosing the wrong cardinality changes the sample, so verify before applying."
 
+  - id: C7-nonreproducible-parallel-rng
+    category: environment
+    kind: defect
+    priority: P1
+    rule: "Author should make parallel random draws reproducible. A `foreach(...) %dopar%` loop (or a doParallel backend) without doRNG advances a separate RNG stream on every worker, so bootstrap and simulation results change from run to run and cannot be reproduced."
+    detection: "An R file uses `%dopar%` with no `%dorng%` and no `registerDoRNG(...)` anywhere in the file."
+    languages: [r]
+    source_lessons: ["JASA fdid_paper referee: doParallel %dopar% bootstrap was not reproducible; required doRNG (registerDoRNG + %dorng%) and a re-run of Table 1"]
+    why_downstream: "Each parallel worker draws from its own uninitialised stream, so a re-run produces different bootstrap CIs or simulation numbers than the paper reports. The downstream reproducibility check then fails to match, and the mismatch is silent."
+    target_form: "Use the doRNG package for reproducible parallel streams: load doRNG, call `registerDoRNG(<seed>)` before the loop, and keep `%dopar%` (registerDoRNG makes it reproducible) or switch the operator to `%dorng%`. After the fix, regenerate the affected tables and figures, since the numbers settle once to new, now-stable values."
+    lossless_note: "Adding reproducible RNG changes the random draws, so the bootstrap and simulation estimates and their intervals move once to new, reproducible values. This is not a formatting change: the author must re-run and update the reported numbers. Propose-only; never auto-apply."
+    propose_only: true
+
   - id: B11-rmd-chunk-in-r
     category: code-style
     kind: defect
@@ -446,6 +459,58 @@ rules:
     why_downstream: "Without per-file documentation, the downstream replicator (and a reviewer) cannot tell which script produces which table, what each data file is, or where variable definitions live — every file becomes a guessing exercise that slows or breaks reproduction."
     target_form: "Provide a README that lists each script (purpose, paper section/table it builds, inputs, outputs) and each data file (what it is, raw vs derived, where the codebook/variable definitions are). A single README with a per-file section is fine; a per-file README is also acceptable."
     lossless_note: "Generating README documentation is purely ADDITIVE — it writes NEW markdown/README files describing existing scripts and data; it never edits, runs, or changes any script, data, or result. The host LLM may DRAFT the README from the static evidence it has (dependency graph, table->command map, data-load targets, codebook references) but should clearly mark anything it inferred so the author can confirm. Do not invent a file's purpose if it cannot be inferred — flag it for the author."
+
+  - id: D5-duplicate-readme
+    category: structural
+    kind: defect
+    priority: P2
+    rule: "Author should ship a single canonical README. Multiple README-like files under different names or folders can diverge and give a replicator conflicting instructions."
+    detection: "More than one README-like document by name and location (a same-name .md plus .pdf pair counts as one document in two formats) exists in the package."
+    languages: [stata, r, python]
+    source_lessons: ["reproai issue #3: an APSR package shipped ReadMe.pdf and code/<paper>_ReadMe.pdf that were different drafts (different install lists, different figure-change notes)"]
+    why_downstream: "A replicator may follow the wrong README, run a stale install list, or apply the wrong figure-change note, so the package does not reproduce as the current draft intends, and the discrepancy is easy to miss."
+    target_form: "Keep one canonical README at the package root and remove or clearly archive the others; if more than one is genuinely needed, reconcile them so they agree. A README.md plus its rendered README.pdf at the same location is fine."
+    lossless_note: "Reconciling or removing a divergent README is an author decision, since the drafts may differ deliberately. Propose the reconciliation and point to the divergent files; never auto-delete a README."
+    propose_only: true
+
+  - id: D6-readme-missing-paths
+    category: structural
+    kind: defect
+    priority: P3
+    rule: "Author should not reference files or folders in the README that the package does not contain; a replicator will look for them and not find them."
+    detection: "A backtick-quoted README path (a folder ending in / or a file with a code/data extension) does not resolve to any file or folder in the package. Only backtick-quoted tokens are checked, so folder-tree diagrams and prose do not trigger it."
+    languages: [stata, r, python]
+    source_lessons: ["reproai issue #3: an APSR package's README referenced a tutorial/ folder and a data/ codebook that were not in the package"]
+    why_downstream: "A replicator follows the README, looks for the named path, and cannot find it, so a documented step cannot be carried out and the package looks incomplete or broken."
+    target_form: "Either add the referenced file or folder to the package, or correct/remove the README reference so every path it names actually exists. Keep the README and the shipped files in sync."
+    lossless_note: "Whether to add the missing file or fix the reference is an author decision (the path may be a typo, or the file may have been left out). Propose the mismatch with the exact token; do not edit the README or invent files automatically."
+    propose_only: true
+
+  - id: A13-unreferenced-script
+    category: structural
+    kind: defect
+    priority: P2
+    rule: "Author should keep only scripts the run path actually uses; a code file the master never sources and no other script calls is usually an exploratory or obsolete leftover that confuses a replicator."
+    detection: "A package that has a master/sourcing structure also contains a code file that is neither sourced by another script nor sources one, and whose name appears in no other script."
+    languages: [stata, r, python]
+    source_lessons: ["best-practice review: exploratory or obsolete scripts left in the public run path"]
+    why_downstream: "A replicator cannot tell whether the stray script is part of the analysis or dead weight, may run it and hit errors, and loses time reconciling it against the documented run order."
+    target_form: "Either wire the script into the master/run order if it is needed, or move it into a clearly labelled archive folder (or delete it) if it is exploratory, so the public path contains only what produces the results."
+    lossless_note: "Whether a stray script is needed, archivable, or deletable is an author decision; it may be a helper sourced in a way the scan missed. Propose the reclassification; never auto-delete or move a script."
+    propose_only: true
+
+  - id: N5-unsafe-filename
+    category: normalization
+    kind: normalization
+    priority: P3
+    rule: "Author should name scripts and data files without spaces or shell-unsafe characters, which break command-line runs, master scripts, and many tools."
+    detection: "A script or data filename contains a space or a shell-unsafe character such as parentheses, ampersand, semicolon, pipe, dollar sign, asterisk, question mark, angle brackets, or quotes."
+    languages: [stata, r, python]
+    source_lessons: ["best-practice review: file names with spaces and special characters break automated runs"]
+    why_downstream: "An unquoted reference to a file whose name has a space or a shell metacharacter is split or mis-parsed, so a script, master file, or wrapper that points at it fails when the package is re-run."
+    target_form: "Rename the file to use only letters, digits, hyphens, and underscores, and update every reference to it; lowercase-with-underscores is a safe default."
+    lossless_note: "Renaming a file changes every path that points to it and must be done together with updating those references, which can change behaviour if one is missed. Propose the rename and the reference updates; do not rename automatically."
+    propose_only: true
 
   - id: A12-table-comment-mapping
     category: structural

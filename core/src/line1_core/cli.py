@@ -141,6 +141,46 @@ def _cmd_verify(args: argparse.Namespace) -> int:
     return code
 
 
+def _cmd_readme(args: argparse.Namespace) -> int:
+    root = Path(args.path).resolve()
+    if not root.is_dir():
+        print(f"error: not a directory: {root}", file=sys.stderr)
+        return 2
+    if args.render:
+        return _render_readme(root, args.out)
+    text = coordinator.readme_scaffold(root)  # default action: scaffold a draft
+    if args.out:
+        Path(args.out).write_text(text, encoding="utf-8")
+        print(f"Wrote README scaffold to {args.out}")
+    else:
+        print(text)
+    return 0
+
+
+def _render_readme(root: Path, out: str | None) -> int:
+    import shutil
+    import subprocess
+
+    src = next((p for p in root.iterdir() if p.is_file() and p.name.lower() == "readme.md"), None)
+    if src is None:
+        print("error: no README.md found at the package root to render.", file=sys.stderr)
+        return 2
+    dest = Path(out) if out else src.with_suffix(".pdf")
+    exe = shutil.which("pandoc")
+    if exe is None:
+        print("pandoc not found. Install pandoc, then run:")
+        print(f'  pandoc "{src.name}" -o "{dest.name}" --pdf-engine=xelatex')
+        return 1
+    proc = subprocess.run(
+        [exe, str(src), "-o", str(dest), "--pdf-engine=xelatex"], capture_output=True, text=True
+    )
+    if proc.returncode != 0:
+        print(f"error: pandoc failed: {proc.stderr.strip()[:200]}", file=sys.stderr)
+        return 1
+    print(f"Rendered {src.name} -> {dest}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="reproai",
@@ -173,6 +213,13 @@ def build_parser() -> argparse.ArgumentParser:
     verify.add_argument("--since", type=float, default=None, help="Epoch seconds; require artifacts modified at/after this time (run freshness).")
     verify.add_argument("--json", action="store_true", help="Print the full verify report as JSON.")
     verify.set_defaults(func=_cmd_verify)
+
+    readme = sub.add_parser("readme", help="Scaffold a README draft from the package structure, or render README.md to PDF.")
+    readme.add_argument("path", help="Path to the replication package working directory.")
+    readme.add_argument("--scaffold", action="store_true", help="Print a README.md draft assembled from the package facts (default action).")
+    readme.add_argument("--render", action="store_true", help="Render README.md to PDF via pandoc (or print the one-liner if pandoc is absent).")
+    readme.add_argument("--out", default=None, help="Output file (scaffold: default stdout; render: default <path>/README.pdf).")
+    readme.set_defaults(func=_cmd_readme)
     return parser
 
 

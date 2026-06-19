@@ -13,7 +13,7 @@ only when you ask — runs the package as a smoke test. Website: [reproai.org](h
 You point it at a messy replication package (Stata / R / Python). It:
 
 1. **Scans, statically** — file inventory, dependency graph, table↔command mapping, orphan
-   files, an author rule set, and a target-venue profile (AEA, Econometric Society, APSR, AJPS, JOP, …).
+   files, an author rule set, and a target-venue profile (AEA, Econometric Society, JASA, APSR, AJPS, JOP, …).
 2. **Advises, by priority** — every finding is graded **P0–P4** by its downstream
    reproducibility cost (P0 = blocks the run; P4 = polish) and tagged **defect** ("this would
    cost the pipeline") vs **normalization** ("a more standard way to write it"). Each finding
@@ -43,7 +43,7 @@ You point it at a messy replication package (Stata / R / Python). It:
 
 ## What it checks (rule set)
 
-36 author-preventable rules across four families, each with a fix prompt and a per-rule
+41 author-preventable rules across four families, each with a fix prompt and a per-rule
 lossless boundary:
 
 - **Structural** — explicit data loads, stable includes, no mid-script `cd`, intermediate-data
@@ -93,3 +93,7 @@ site/                 the reproai.org website
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+## Recommended reading
+
+We recommend Yusaku Horiuchi's [Replication Package Guide](https://github.com/yhoriuchi/replication-package-guide), a comprehensive guide for social science researchers, as a complementary read.
