@@ -22,15 +22,25 @@ profile version. The `reproai check` summary line also prints `knowledge: engine
 
 ## Update to the latest
 
-reproai is distributed through the Plugin Marketplace; a new rules_version ships as a new plugin
-version. To update:
+reproai has **two parts**: the plugin *commands* (shipped through the Marketplace) and the Python
+*engine* that holds the rules and venue profiles (installed from this repo). The rules live in the
+engine, so updating the plugin alone does **not** refresh them — update both.
+
+First, the commands:
 
 ```
 /plugin marketplace update reproai        # refresh the marketplace listing
-/plugin update reproai                      # install the latest reproai (new rules included)
+/plugin update reproai                      # latest commands
+/reload-plugins                             # (or restart) so the new commands load
 ```
 
-Then `/reload-plugins` (or restart) so the new rules load.
+Then the engine, where the rules and venue profiles actually live:
+
+```bash
+pip install -U "git+https://github.com/leoyyang/reproai#subdirectory=core"
+```
+
+Re-run a check and read `knowledge_versions` to confirm the new `rules_version` loaded.
 
 ## How new rules get in (for maintainers)
 
