@@ -218,6 +218,7 @@ body {
 .cards > .card { min-width: 0; }
 .update-cards { margin-top: 22px; }
 .update-footnote { margin: 14px 0 0; font-size: 13px; line-height: 1.55; color: var(--ink-faint); }
+.update-footnote code { font-family: var(--mono); color: var(--red); }
 .cards.four { grid-template-columns: repeat(2, 1fr); }
 .card {
   position: relative;

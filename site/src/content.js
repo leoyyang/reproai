@@ -83,26 +83,23 @@ export const content = {
 
   install: {
     head: {
-      lead: "Install",
+      lead: "Install & Update",
       emphasis: "ReproAI",
       sub: "ReproAI is a plugin for Claude Code and OpenAI Codex, backed by a small Python engine (3.10+) that the commands call. Install both once and it's available in every project.",
     },
     claude: {
-      title: "Claude Code",
+      title: "Install · Claude Code",
       lines: [
         [P("❯ "), SLASH("/plugin marketplace add"), TXT(" leoyyang/reproai")],
-        [OUT("✓ Added marketplace: reproai")],
-        [],
         [P("❯ "), SLASH("/plugin install"), TXT(" reproai@reproai"), TXT("   "), OUT("# plugin@marketplace")],
         [OUT("✓ Installed the reproai commands")],
-        [],
         [P("$ "), CMD("pip install"), TXT(" \"git+https://github.com/leoyyang/reproai#subdirectory=core\"")],
         [OUT("✓ reproai engine on PATH")],
       ],
-      note: "Two parts: `/plugin install` adds the commands; `pip install` adds the engine they call. `reproai@reproai` reads as `plugin@marketplace`. Both install globally, so you can launch `claude` from any folder.",
+      note: "Two parts, in two places: inside Claude Code, `/plugin install` adds the commands; in your terminal, `pip install` adds the engine they call. Both install globally, so you can launch `claude` from any folder.",
     },
     codex: {
-      title: "OpenAI Codex",
+      title: "Install · Codex",
       lines: [
         [P("$ "), CMD("git clone"), TXT(" https://github.com/leoyyang/reproai")],
         [P("$ "), CMD("cd"), TXT(" reproai")],
@@ -119,19 +116,18 @@ export const content = {
           [P("❯ "), SLASH("/plugin marketplace update"), TXT(" reproai")],
           [P("❯ "), SLASH("/plugin update"), TXT(" reproai"), TXT("   "), OUT("# latest commands")],
           [P("❯ "), SLASH("/reload-plugins")],
-          [],
           [P("$ "), CMD("pip install -U"), TXT(" \"git+https://github.com/leoyyang/reproai#subdirectory=core\"")],
         ],
         note: "The plugin update refreshes the commands; the `pip` update refreshes the rules and venue profiles, which live in the engine.",
       },
       codex: {
-        title: "Update · OpenAI Codex",
+        title: "Update · Codex",
         lines: [
           [P("$ "), CMD("git -C"), TXT(" reproai "), CMD("pull")],
           [P("$ "), CMD("reproai/codex-plugin/install.sh"), TXT("  "), OUT("# relink skills")],
           [P("$ "), CMD("pip install -U -e"), TXT(" reproai/core")],
         ],
-        note: "Pull the repo, relink the skills, and reinstall the engine for the latest rules and venues.",
+        note: "Pull the repo and relink the skills, then reinstall the engine. `pip install -U` (upgrade) reinstalls over your existing copy instead of skipping it, so new dependencies and the latest rules and venue profiles take effect.",
       },
       footnote: "`/reproai:update` only prints your installed version and these steps; it does not update anything itself.",
     },
