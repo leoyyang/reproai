@@ -228,6 +228,7 @@ export const content = {
 
   footer: {
     links: [
+      { label: "Changelog", href: "/changelog/" },
       { label: "Report a bug or ask for a feature", href: `${GH}/issues`, newTab: true },
     ],
     note: "The plugin authors run before submission.",

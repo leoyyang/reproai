@@ -1,29 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { content, GH } from "./content.js";
-
-// render `inline code` spans from backticks in a plain content string
-function withCode(text) {
-  return text.split("`").map((seg, i) =>
-    i % 2 === 1 ? <code key={i}>{seg}</code> : <React.Fragment key={i}>{seg}</React.Fragment>
-  );
-}
-
-function Nav() {
-  return (
-    <nav className="nav">
-      <a className="brand" href="#top">
-        <span className="brand-mark">{content.brand.mark}</span>
-        <span className="brand-name">{content.brand.name}</span>
-      </a>
-      <div className="nav-links">
-        {content.nav.links.map((l) => (
-          <a key={l} href={`#${l.toLowerCase()}`}>{l}</a>
-        ))}
-      </div>
-    </nav>
-  );
-}
+import { Nav, Footer, withCode } from "./shared.jsx";
 
 function EnginePanel() {
   const stages = content.engine.stages;
@@ -288,26 +266,26 @@ function Cite() {
   );
 }
 
-function Footer() {
-  return (
-    <footer className="footer">
-      <div className="footer-inner">
-        <div className="brand">
-          <span className="brand-mark">{content.brand.mark}</span>
-          <span className="brand-name">{content.brand.name}</span>
-        </div>
-        <div className="footer-links">
-          {content.footer.links.map((l) => (
-            <a key={l.label} href={l.href} {...(l.newTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}>{l.label}</a>
-          ))}
-        </div>
-        <div className="footer-note">{content.footer.note}</div>
-      </div>
-    </footer>
-  );
-}
-
 export default function App() {
+  // Arriving from another page via /#section (e.g. the changelog nav) otherwise lands at
+  // the top: the section isn't in the DOM until React mounts, so the browser's native
+  // anchor scroll — which runs before mount — finds nothing, and its scroll restoration
+  // then pins the page at the top. Take over restoration and scroll to the target after
+  // mount, re-asserting once more to win against late web-font reflow.
+  useEffect(() => {
+    const id = window.location.hash.slice(1);
+    if (!id) return;
+    if ("scrollRestoration" in window.history) window.history.scrollRestoration = "manual";
+    const scrollToTarget = () => {
+      const el = document.getElementById(decodeURIComponent(id));
+      if (el) el.scrollIntoView({ behavior: "instant", block: "start" });
+    };
+    scrollToTarget();
+    const raf = requestAnimationFrame(scrollToTarget);
+    const timer = setTimeout(scrollToTarget, 200);
+    return () => { cancelAnimationFrame(raf); clearTimeout(timer); };
+  }, []);
+
   return (
     <div id="top">
       <div className="bg-grid" aria-hidden="true" />
