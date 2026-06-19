@@ -202,7 +202,10 @@ body {
 .pill { font-family: var(--mono); font-size: 10.5px; font-weight: 600; padding: 2px 8px; border-radius: 6px; color: #fff; flex: none; letter-spacing: 0.02em; }
 .pill.p0 { background: var(--red); }
 .pill.p1 { background: var(--amber); }
+.pill.p2 { background: #475569; }
 .pill.p3 { background: #64748b; }
+.pill.p4 { background: #cbd5e1; color: var(--ink); }
+.advisory-note { margin: 12px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--ink-faint); }
 
 @media (prefers-reduced-motion: reduce) {
   .stage { transition: none; }
@@ -375,3 +378,107 @@ body {
 
 /* highlight a word in section copy (e.g. "privacy" in the contribute intro) */
 .hl { color: var(--red); font-weight: 600; }
+
+/* the inline command in the changelog intro reads in red (monospace, no chip) */
+.changelog .section-head p code {
+  font-family: var(--mono);
+  font-weight: 600;
+  font-size: 0.94em;
+  color: var(--red);
+  background: none;
+  padding: 0;
+}
+
+/* anchored release should clear the top a touch when jumped to */
+.release { scroll-margin-top: 24px; }
+
+/* floating release navigation — appears on scroll, jumps between versions */
+.pagenav {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+}
+.pagenav.visible,
+.pagenav.open { opacity: 1; pointer-events: auto; }
+.pagenav-btn {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 9px 16px;
+  font-family: var(--sans);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  line-height: 1;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.pagenav-btn:hover { border-color: var(--red); color: var(--red); }
+.pagenav-ico { font-size: 15px; line-height: 1; }
+.pagenav-panel {
+  display: none;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow-lg);
+  padding: 9px 8px 7px;
+  width: min(264px, 82vw);
+  max-height: min(70vh, 460px);
+  overflow: auto;
+}
+.pagenav.open .pagenav-panel { display: block; }
+.pagenav-panel .pn-h {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+  font-weight: 700;
+  margin: 4px 12px 8px;
+}
+.pagenav-panel ol { list-style: none; margin: 0; padding: 0; }
+.pagenav-panel li { margin: 0; }
+.pagenav-panel a {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 14px;
+  padding: 7px 12px;
+  color: var(--ink-soft);
+  text-decoration: none;
+  border-radius: 8px;
+}
+.pagenav-panel a:hover { background: var(--paper-2); color: var(--ink); }
+.pagenav-panel a.active { background: var(--red-soft); }
+.pagenav-panel a.active .pn-ver { color: var(--red); }
+.pagenav-panel .pn-ver { font-family: var(--mono); font-size: 13px; font-weight: 600; }
+.pagenav-panel .pn-date {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+.pagenav-top {
+  display: block;
+  padding: 8px 12px;
+  margin-top: 5px;
+  border-top: 1px solid var(--line);
+  color: var(--ink-faint);
+  text-decoration: none;
+  font-size: 13px;
+}
+.pagenav-top:hover { color: var(--red); }
+@media print { .pagenav { display: none; } }

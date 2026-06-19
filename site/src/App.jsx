@@ -62,6 +62,9 @@ function EnginePanel() {
               <li key={a.label}><span className={`pill ${a.cls}`}>{a.label}</span> {a.text}</li>
             ))}
           </ul>
+          {content.engine.advisoryNote && (
+            <p className="advisory-note">{content.engine.advisoryNote}</p>
+          )}
         </motion.div>
 
         <motion.div className="engine-evolve" variants={item}>

@@ -66,12 +66,15 @@ export const content = {
       { name: "/reproai:fix", note: "Rewrites the recommended fixes to a copy, re-checks" },
       { name: "/reproai:debug", note: "Smoke-tests: does it run? tables/figures emitted?", runs: true },
     ],
-    outputLabel: "Output · priority-graded advisory",
+    outputLabel: "Output · priority-graded advisory (examples)",
     advisory: [
-      { cls: "p0", label: "P0", text: "Guarded fallback loads the wrong dataset" },
-      { cls: "p1", label: "P1", text: "Declare the software version" },
-      { cls: "p3", label: "P3", text: "Group commands by the table they build" },
+      { cls: "p0", label: "P0", text: "Code falls back to the wrong dataset" },
+      { cls: "p1", label: "P1", text: "The software version is never recorded" },
+      { cls: "p2", label: "P2", text: "A results table is never saved to a file" },
+      { cls: "p3", label: "P3", text: "No comment links each result to its table" },
+      { cls: "p4", label: "P4", text: "README doesn't follow the journal's template" },
     ],
+    advisoryNote: "Ranked by priority, from P0 blockers to P4 polish.",
     update: {
       cmd: "/reproai:update",
       note: "Outside the per-package flow — the rule set keeps evolving as more packages are seen.",
@@ -120,7 +123,7 @@ export const content = {
       title: "Command Line",
       runLines: [
         [P("❯ "), SLASH("/reproai:check"), TXT(" . "), FLAG("--venue aea")],
-        [OUT("  advisory: P0=1 P1=1 P3=2")],
+        [OUT("  advisory: P0=1 P1=2 P2=1 P3=3 P4=1")],
         [OUT("  venue (aea): 2 pass / 2 fail / 5 action")],
         [P("❯ "), SLASH("/reproai:fix"), TXT(" . "), OUT("# rewrite to a copy")],
         [P("❯ "), SLASH("/reproai:debug"), TXT(" "), OUT("# smoke-test the copy: does it run?")],
