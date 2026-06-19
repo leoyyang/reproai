@@ -239,5 +239,25 @@ never posts: it builds a pre-filled new-issue URL the user submits, and never in
 - `tools/bump_version.py` now bumps all five version files (it had missed the Codex manifest), guarded by
   a new `test_version_lockstep`; every version file is reconciled to 0.4.2.
 
+## venue profile: add `worldbank` (World Bank Reproducible Research Repository) (2026-06-19)
+
+- Added the `worldbank` venue profile (profile_version 2025-10-20), 8 checks, for the World Bank
+  Reproducible Research Repository — the internal reproducibility verification World Bank staff and
+  consultants go through (on request, via the intake form) before journal submission. Per the World
+  Bank reproducibility-package checklist: a main script that runs all code after changing only the
+  top-level directory, a README at root with the order of execution when there is no main script, a
+  README stating the software and version used, an outputs-to-scripts mapping, the line(s) in the main
+  script to change for a different machine, raw-to-analysis code starting from original data, a Data
+  Availability Statement, and the verification request itself. Each check carries a verbatim
+  `policy_quote`. Reuses the existing detector set (no engine change); a profile-supplied
+  `readme_sections` override matches the checklist's README contents. Added to the venue-profile test
+  matrix (auto-discovered via glob). Suggested by Mateo Servent (World Bank).
+
+## plugin 0.4.3: World Bank venue (2026-06-19)
+
+- Bumped the plugin to 0.4.3 (Claude marketplace and manifests, Codex manifest, core package) for the
+  new `worldbank` venue profile suggested by Mateo Servent (World Bank). Registered `worldbank` in the
+  shipped-venue lists across the check / comply / contribute command docs and Codex skills.
+
 <!-- Append new entries above this line. Each entry: bump rules_version, list added/changed rule ids
      and the Line 2 lesson(s) they were promoted from. -->

@@ -36,7 +36,7 @@ belongs here) · **a false flag** (it flagged something fine) · **a new venue**
 
 ## New-venue mode
 
-- **Step 0 — dedup.** Shipped venues: `aea`, `econsoc`, `jasa`, `apsr`, `ajps`, `jop`, `generic_dataverse`,
+- **Step 0 — dedup.** Shipped venues: `aea`, `econsoc`, `jasa`, `worldbank`, `apsr`, `ajps`, `jop`, `generic_dataverse`,
   `generic_openicpsr` (glob the installed `venues/*.yaml` if reachable). Matches an existing venue → stop
   (already supported). Checks ⊆ a generic profile → recommend `--venue generic_...`, do not mint a profile.
 - **Step 1 — citation gate (hard).** Require the official replication/data-code policy URL. No URL → stop,

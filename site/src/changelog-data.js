@@ -31,6 +31,17 @@ export const changelog = {
 
   releases: [
     {
+      version: "0.4.3",
+      date: "June 19, 2026",
+      title: "A venue for the World Bank Reproducible Research Repository.",
+      changes: [
+        {
+          tag: "New",
+          text: "World Bank venue profile (`worldbank`): the internal reproducibility check World Bank staff and consultants go through before journal submission. It looks for a main script that runs everything after you change only the top-level folder, a README that gives the run order and states the software and version used, a map from each output to the script that makes it, the line(s) to edit to run on another machine, code that starts from the original data, a data availability statement, and the verification request itself. Suggested by Mateo Servent (World Bank).",
+        },
+      ],
+    },
+    {
       version: "0.4.2",
       date: "June 19, 2026",
       title: "Contribute back: send lessons and new venues as GitHub issues.",

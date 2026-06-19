@@ -39,7 +39,7 @@ Use AskUserQuestion:
 
 ## New-venue mode
 
-**Step 0 — dedup.** reproai already ships `aea`, `econsoc`, `jasa`, `apsr`, `ajps`, `jop`, plus
+**Step 0 — dedup.** reproai already ships `aea`, `econsoc`, `jasa`, `worldbank`, `apsr`, `ajps`, `jop`, plus
 `generic_dataverse` / `generic_openicpsr` (glob the installed `venues/*.yaml` if reachable to be current).
 If the proposal matches a shipped venue's id, name, or `applies_to` → stop and say it is already supported
 (a profile *update* is a separate path). If the proposed checks are a subset of a generic profile →
