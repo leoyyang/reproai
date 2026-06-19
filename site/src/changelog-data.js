@@ -31,6 +31,21 @@ export const changelog = {
 
   releases: [
     {
+      version: "0.4.2",
+      date: "June 19, 2026",
+      title: "Contribute back: send lessons and new venues as GitHub issues.",
+      changes: [
+        {
+          tag: "New",
+          text: "`/reproai:contribute` turns a lesson into a structured GitHub issue: a defect reproai missed, a false flag, or a journal we don't support yet with its replication rules. reproai never posts on your behalf — it hands you a pre-filled issue to review and submit, and never includes your data, results, or file paths.",
+        },
+        {
+          tag: "New",
+          text: "Suggesting a venue: you give the journal's official policy URL and its requirements (each with a verbatim quote); reproai drafts and validates a venue profile, and a maintainer verifies every requirement against the policy before it ships.",
+        },
+      ],
+    },
+    {
       version: "0.4.1",
       date: "June 18, 2026",
       title: "A venue for JASA, plus reproducible runs and README tools.",

@@ -5,7 +5,7 @@ import json
 import sys
 from pathlib import Path
 
-from . import __version__, coordinator, inventory
+from . import __version__, contribute, coordinator, inventory
 from . import fix_applier
 from . import fix_planner
 from . import gate as gate_mod
@@ -181,6 +181,48 @@ def _render_readme(root: Path, out: str | None) -> int:
     return 0
 
 
+def _cmd_contribute(args: argparse.Namespace) -> int:
+    if args.venue:
+        path = Path(args.venue)
+        if not path.is_file():
+            print(f"error: draft file not found: {path}", file=sys.stderr)
+            return 2
+        text = path.read_text(encoding="utf-8", errors="replace")
+        leaks = contribute.scrub_leaks(text)
+        if leaks:  # a venue suggestion is about the journal, not your package — block, don't redact
+            print("BLOCKED: the draft contains identifying content that must not be posted:")
+            for lk in leaks:
+                print(f"  {lk['label']}: {lk['match']}")
+            print("Remove these (a venue suggestion needs no package data) and re-run.")
+            return 1
+        report = contribute.validate_venue_draft(text)
+        if report["ok"]:
+            dr = report["dry_run"] or {}
+            print(f"OK: venue draft '{report['venue_id']}' is well-formed "
+                  f"({dr.get('checks', 0)} checks; runs clean on a fixture).")
+            print("Mechanical checks pass. A maintainer still verifies each check against your policy quotes.")
+            return 0
+        print(f"NOT READY: {len(report['errors'])} issue(s) in the venue draft:")
+        for e in report["errors"]:
+            print(f"  - {e}")
+        return 1
+    if args.scrub:
+        path = Path(args.scrub)
+        if not path.is_file():
+            print(f"error: file not found: {path}", file=sys.stderr)
+            return 2
+        leaks = contribute.scrub_leaks(path.read_text(encoding="utf-8", errors="replace"))
+        if not leaks:
+            print("OK: no identifying content detected.")
+            return 0
+        print(f"Found {len(leaks)} item(s) to remove before contributing:")
+        for lk in leaks:
+            print(f"  {lk['label']}: {lk['match']}")
+        return 1
+    print("error: pass --venue <draft.yaml> to validate a venue draft, or --scrub <file>.", file=sys.stderr)
+    return 2
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="reproai",
@@ -220,6 +262,11 @@ def build_parser() -> argparse.ArgumentParser:
     readme.add_argument("--render", action="store_true", help="Render README.md to PDF via pandoc (or print the one-liner if pandoc is absent).")
     readme.add_argument("--out", default=None, help="Output file (scaffold: default stdout; render: default <path>/README.pdf).")
     readme.set_defaults(func=_cmd_readme)
+
+    contrib = sub.add_parser("contribute", help="Vet a contribution before you file it: validate a drafted venue profile, or scrub a file for identifying content.")
+    contrib.add_argument("--venue", default=None, metavar="DRAFT.yaml", help="Validate a drafted venues/<id>.yaml: schema, known detectors, a clean dry-run.")
+    contrib.add_argument("--scrub", default=None, metavar="FILE", help="Report identifying content (absolute paths, emails) in a file before you post it.")
+    contrib.set_defaults(func=_cmd_contribute)
     return parser
 
 

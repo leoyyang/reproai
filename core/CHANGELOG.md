@@ -212,5 +212,32 @@ credited in the GitHub README's "Recommended reading" section):
   saved-to), plus a data-sources-and-availability block that prompts for restricted-data details and a
   "Last verified" line. Rule count 39 -> 41.
 
+## plugin 0.4.2: /reproai:contribute (community contributions) (2026-06-19)
+
+A new `/reproai:contribute` command lets users send lessons back as structured GitHub issues. reproai
+never posts: it builds a pre-filled new-issue URL the user submits, and never includes package data.
+
+- Three modes: a missed rule, a false flag (both feed the rule-lesson flow), and a NEW VENUE (a journal
+  not yet supported, with its replication policy).
+- New-venue mode: a citation gate (official policy URL required, or refuse), a verbatim `policy_quote`
+  per requirement (so a maintainer verifies fidelity by string-search), detector choices constrained to
+  the known set, and dedup against the shipped venues. The deterministic engine does only the mechanical,
+  verifiable part; interpreting the policy into detectors stays with the LLM, and fidelity stays human.
+  No draft-YAML assembler was built (an independent audit found it would guard nothing CI does while
+  manufacturing a confident-wrong-detector failure mode).
+- Engine support (`core/src/line1_core/contribute.py` + `reproai contribute`): `--scrub` flags
+  identifying content (absolute/home paths, emails, ORCIDs); `--venue <draft.yaml>` blocks on a leak,
+  then validates a drafted profile (schema, known detectors, a clean dry-run on a synthetic fixture) and
+  green-lights it before it becomes an issue.
+- `unbuilt_detector`: a profile may park a statically-checkable requirement with no detector yet as
+  `detector: unbuilt_detector` + `needs_detector:`; it emits a distinct `not_applicable` (never a disguised
+  manual stub), and `test_no_unbuilt_detectors_in_shipped_profiles` keeps an owed detector from shipping
+  forgotten. `venue_engine.run_profile()` lets a draft be dry-run without installing; `KNOWN_DETECTORS`
+  is the closed set the validator enforces. The venue test matrix now globs `venues/*.yaml`, so a new
+  profile is matrix-tested automatically.
+- Issue templates: `venue-contribution.yml` (form) + `.md` fallback, and `lesson-contribution.md`.
+- `tools/bump_version.py` now bumps all five version files (it had missed the Codex manifest), guarded by
+  a new `test_version_lockstep`; every version file is reconciled to 0.4.2.
+
 <!-- Append new entries above this line. Each entry: bump rules_version, list added/changed rule ids
      and the Line 2 lesson(s) they were promoted from. -->

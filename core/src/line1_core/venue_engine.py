@@ -20,6 +20,14 @@ _README_SECTION_HINTS = [
 ]
 _ABS_PATH = re.compile(r'(?:[A-Za-z]:\\|\\\\|/Users/|/home/|~/)')
 
+# the closed set of venue-check detectors the engine knows how to run; the contribute-time
+# validator rejects a profile that names any detector outside this set (run() itself stays lenient).
+KNOWN_DETECTORS = frozenset({
+    "readme_pdf_at_root", "readme_at_root", "readme_has_sections", "has_master_script",
+    "env_declared", "no_absolute_paths", "rederive_from_raw", "file_count_limit",
+    "license_at_root", "manual_author_action", "unbuilt_detector",
+})
+
 
 @dataclass
 class Check:
@@ -114,8 +122,13 @@ def _env_declared(root: Path, entries: list[FileEntry]) -> bool:
 
 
 def run(root: Path, entries: list[FileEntry], venue: str) -> tuple[dict[str, Any], list[Check]]:
+    return run_profile(root, entries, load_profile(venue))
+
+
+def run_profile(root: Path, entries: list[FileEntry], profile: dict[str, Any]) -> tuple[dict[str, Any], list[Check]]:
+    """Run a profile that is already loaded — lets the contribute validator dry-run a DRAFT profile
+    that is not installed in venues/ yet."""
     root = root.resolve()
-    profile = load_profile(venue)
     checks: list[Check] = []
 
     def add(spec: dict[str, Any], status: str, detail: str, evidence: list[str]) -> None:
@@ -203,6 +216,13 @@ def run(root: Path, entries: list[FileEntry], venue: str) -> tuple[dict[str, Any
                 [lic] if lic else [])
         elif detector == "manual_author_action":
             add(spec, "needs_author_action", "Requires an author action that cannot be verified statically.", [])
+        elif detector == "unbuilt_detector":
+            # an honest, CI-guarded placeholder: a statically-checkable requirement whose detector has
+            # not been built yet. Deliberately not_applicable + named, so it is never mistaken for a
+            # permanent manual_author_action stub and can be found by test_no_unbuilt_detectors_in_shipped_profiles.
+            target = spec.get("needs_detector", "?")
+            add(spec, "not_applicable",
+                f"Check '{spec['check_id']}' awaits a new detector '{target}'; reproai cannot verify it yet.", [])
         else:
             add(spec, "not_applicable", f"Unknown detector '{detector}'.", [])
 

@@ -85,7 +85,7 @@ body {
 
 /* section */
 .section { max-width: var(--maxw); margin: 0 auto; padding: 84px 28px; }
-.section-head { max-width: 760px; margin-bottom: 44px; }
+.section-head { margin-bottom: 44px; }
 .section-head h2 { font-size: 42px; font-weight: 800; letter-spacing: -0.035em; line-height: 1.08; margin: 0 0 14px; }
 .section-head p { color: var(--ink-soft); font-size: 18px; line-height: 1.6; margin: 0; }
 .red { color: var(--red); }
@@ -372,3 +372,6 @@ body {
 @media (max-width: 560px) {
   .release .release-head { flex-direction: column; align-items: flex-start; gap: 4px; }
 }
+
+/* highlight a word in section copy (e.g. "privacy" in the contribute intro) */
+.hl { color: var(--red); font-weight: 600; }

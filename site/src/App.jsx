@@ -211,6 +211,35 @@ function Examples() {
   );
 }
 
+function Contribute() {
+  const c = content.contribute;
+  return (
+    <section id="contribute" className="section">
+      <SectionHead lead={c.head.lead} emphasis={c.head.emphasis} sub={c.head.sub} />
+      <div className="cards two">
+        <div className="card">
+          <span className="redline" />
+          <h3>{c.cli.title}</h3>
+          <Term lines={c.cli.runLines} />
+          <ul className="term-notes">
+            {c.cli.notes.map((n, i) => <li key={i}>{withCode(n)}</li>)}
+          </ul>
+        </div>
+        <div className="card">
+          <span className="redline" />
+          <h3>{c.app.title}</h3>
+          <p>{withCode(c.app.intro)}</p>
+          <div className="chat">
+            <div className="chat-head"><span className="chat-dot" />{c.app.speaker}</div>
+            <div className="chat-bubble">{c.app.prompt}</div>
+          </div>
+          <p className="term-note">{withCode(c.app.note)}</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function FAQ() {
   const c = content.faq;
   const [open, setOpen] = useState(0);
@@ -294,6 +323,7 @@ export default function App() {
       <Install />
       <Usage />
       <Examples />
+      <Contribute />
       <FAQ />
       <Cite />
       <Footer />

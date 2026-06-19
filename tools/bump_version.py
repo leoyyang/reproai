@@ -1,4 +1,4 @@
-"""Bump the plugin version in lockstep across plugin.json, marketplace.json, and pyproject.toml after a knowledge update, so a marketplace `/plugin update` ships the new rules."""
+"""Bump the plugin version in lockstep across the Claude + Codex plugin manifests, marketplace.json, pyproject.toml, and __init__.py after a knowledge update, so a marketplace `/plugin update` ships the new rules."""
 from __future__ import annotations
 
 import argparse
@@ -8,6 +8,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PLUGIN_JSON = ROOT / "claude-plugin/.claude-plugin/plugin.json"
+CODEX_PLUGIN_JSON = ROOT / "codex-plugin/.codex-plugin/plugin.json"
 MARKETPLACE = ROOT / "marketplace.json"
 PYPROJECT = ROOT / "core/pyproject.toml"
 INIT_PY = ROOT / "core/src/line1_core/__init__.py"
@@ -33,11 +34,16 @@ def main(argv: list[str] | None = None) -> int:
     new = _bump_semver(old, args.part)
 
     if args.dry_run:
-        print(f"[dry-run] {old} -> {new} in plugin.json, marketplace.json, pyproject.toml")
+        print(f"[dry-run] {old} -> {new} in plugin.json, codex plugin.json, marketplace.json, pyproject.toml, __init__.py")
         return 0
 
     plugin["version"] = new
     PLUGIN_JSON.write_text(json.dumps(plugin, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+    # the Codex manifest carries its own version string and must move in lockstep too
+    codex = json.loads(CODEX_PLUGIN_JSON.read_text(encoding="utf-8"))
+    codex["version"] = new
+    CODEX_PLUGIN_JSON.write_text(json.dumps(codex, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
     mkt = json.loads(MARKETPLACE.read_text(encoding="utf-8"))
     mkt.setdefault("metadata", {})["version"] = new

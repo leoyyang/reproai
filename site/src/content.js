@@ -41,7 +41,7 @@ export const content = {
 
   nav: {
     // each label also doubles as its scroll-anchor (lowercased must match a section id below)
-    links: ["Overview", "Install", "Usage", "Examples", "FAQ", "Cite"],
+    links: ["Overview", "Install", "Usage", "Examples", "Contribute", "FAQ", "Cite"],
   },
 
   hero: {
@@ -169,6 +169,37 @@ export const content = {
         out: "Tells you exactly what to do before depositing to AEA, APSR, AJPS, JOP…",
       },
     ],
+  },
+
+  contribute: {
+    head: {
+      lead: "You can",
+      emphasis: "contribute",
+      sub: "ReproAI improves by crowdsourcing: send back a defect it missed, a false flag, or a venue it lacks, and it becomes a rule or venue everyone gets. It drafts a pre-filled GitHub issue you submit yourself, with your ==privacy== protected: your data and paths never leave your machine.",
+    },
+    cli: {
+      title: "Command Line",
+      runLines: [
+        [P("❯ "), SLASH("/reproai:contribute"), TXT("   "), OUT("# pick what you found")],
+        [OUT("  · a missed rule · a false flag · a new venue")],
+        [],
+        [OUT("  › a new venue: Quarterly Journal of Economics")],
+        [OUT("  › paste its data & code policy URL")],
+        [OUT("  ✓ drafted the qje profile: 6 checks, runs clean")],
+        [OUT("  → a pre-filled GitHub issue opens; you click Submit")],
+      ],
+      notes: [
+        "`/reproai:contribute` walks you through it and drafts the profile.",
+        "It validates the draft locally before the pre-filled issue opens.",
+      ],
+    },
+    app: {
+      title: "App",
+      intro: "Or just ask your AI assistant in the Claude or Codex desktop app:",
+      speaker: "You",
+      prompt: "We just got my replication package running. Summarize the lessons from this session (anything ReproAI missed, or I had to fix by hand) and help me contribute them back.",
+      note: "It works straight from the session you just ran and drafts the summary. All you do is revise it, approve it, and submit it as a GitHub issue.",
+    },
   },
 
   faq: {

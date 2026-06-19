@@ -11,11 +11,20 @@
 import React from "react";
 import { content } from "./content.js";
 
-// render `inline code` spans from backticks in a plain content string
+// render `inline code` from backticks and ==highlight== from double-equals, in a plain content string
 export function withCode(text) {
-  return text.split("`").map((seg, i) =>
-    i % 2 === 1 ? <code key={i}>{seg}</code> : <React.Fragment key={i}>{seg}</React.Fragment>
-  );
+  const nodes = [];
+  text.split("`").forEach((seg, i) => {
+    if (i % 2 === 1) {
+      nodes.push(<code key={`c${i}`}>{seg}</code>);
+    } else {
+      seg.split("==").forEach((part, j) => {
+        if (j % 2 === 1) nodes.push(<span className="hl" key={`h${i}-${j}`}>{part}</span>);
+        else if (part) nodes.push(<React.Fragment key={`t${i}-${j}`}>{part}</React.Fragment>);
+      });
+    }
+  });
+  return nodes;
 }
 
 export function Nav({ home = true }) {

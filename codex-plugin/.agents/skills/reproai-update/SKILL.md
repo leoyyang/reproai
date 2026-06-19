@@ -31,6 +31,9 @@ Then restart Codex (or reload) so the new rules load.
 
 ## How new rules get in (for maintainers)
 
+Two sources feed the front of this pipeline: internal Line 2 telemetry, and user contributions filed via
+`/reproai:contribute` (GitHub issues; venue suggestions merge as a new `venues/<id>.yaml` after review).
+
 ```
 Line 2 lessons → tools/distill_rules.py → rules-seedbank/candidates.json → human review →
 tools/promote_rule.py → author_rules.yaml (rules_version bumped) →

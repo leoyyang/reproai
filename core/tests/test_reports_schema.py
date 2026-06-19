@@ -24,13 +24,34 @@ def test_report_matches_schema(messy_pkg: Path, key: str, schema_file: str) -> N
     jsonschema.validate(instance=result[key], schema=schema)
 
 
-@pytest.mark.parametrize("venue", ["aea", "econsoc", "apsr", "ajps", "jop", "jasa", "generic_dataverse", "generic_openicpsr"])
+# glob the shipped profiles so a newly added venues/<id>.yaml is matrix-tested automatically —
+# no hand-edited parametrize list to forget (the gap the contribute flow would otherwise leave).
+_VENUES_DIR = Path(__file__).resolve().parents[1] / "src" / "line1_core" / "venues"
+_ALL_VENUES = sorted(p.stem for p in _VENUES_DIR.glob("*.yaml"))
+
+
+@pytest.mark.parametrize("venue", _ALL_VENUES)
 def test_all_venue_profiles_run(messy_pkg: Path, venue: str) -> None:
     result = coordinator.check(messy_pkg, venue)
     vc = result["venue_compliance_report"]
     assert vc is not None
     assert vc["venue"] == venue
     assert vc["summary"]["total"] > 0
+
+
+def test_no_unbuilt_detectors_in_shipped_profiles() -> None:
+    # a profile that parks a gap on `unbuilt_detector` must build the real detector (or consciously
+    # demote the check) before it ships — this keeps an owed detector from rotting invisibly.
+    from line1_core import venue_engine
+
+    offenders = []
+    for venue in _ALL_VENUES:
+        if venue.startswith("generic_"):
+            continue
+        for c in venue_engine.load_profile(venue).get("checks", []):
+            if c.get("detector") == "unbuilt_detector":
+                offenders.append(f"{venue}:{c.get('check_id')}")
+    assert not offenders, f"shipped profiles still carry unbuilt_detector: {offenders}"
 
 
 def test_every_finding_carries_a_rewrite_contract(messy_pkg: Path) -> None:

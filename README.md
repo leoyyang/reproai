@@ -40,6 +40,7 @@ You point it at a messy replication package (Stata / R / Python). It:
 | `/reproai:fix` | Apply the advisory fixes to a **copy** under a lossless contract; re-check; iterate. Chain: **A12 → N2 → D1** (anchor table comments → unroll loops → export per-table outputs). |
 | `/reproai:debug` | Smoke-test the (fixed) copy: run it, confirm injected table/figure outputs appear; ask the author on a runtime error. |
 | `/reproai:update` | Show the installed knowledge version and how to update the rule set. |
+| `/reproai:contribute` | File a pre-filled GitHub issue for a missed rule, a false flag, or a new venue + its rules. You click Submit; reproai never posts. |
 
 ## What it checks (rule set)
 
