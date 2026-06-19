@@ -259,6 +259,17 @@ never posts: it builds a pre-filled new-issue URL the user submits, and never in
   new `worldbank` venue profile suggested by Mateo Servent (World Bank). Registered `worldbank` in the
   shipped-venue lists across the check / comply / contribute command docs and Codex skills.
 
+## plugin 0.4.4: World Bank coverage completion (2026-06-19)
+
+Completes the `worldbank` venue profile with the gaps Mateo Servent's audit surfaced (a follow-on to
+the 0.4.3 World Bank venue).
+
+- New checks `WB-DATA-RIGHTS` (rights statement), `WB-MANUSCRIPT` (final manuscript), `WB-RAW-OUTPUTS`
+  (raw tables/figures), and `WB-CODE-BUILDS-EXHIBITS` (code creates all exhibits and in-text numbers),
+  each with a verbatim `policy_quote`; extended `WB-DATA-AVAILABILITY` to mention the rights statement
+  and per-dataset source/URL/access-year; added the "guides future readers" / "guidance for the
+  reviewer" hints to the `WB-README-SECTIONS` requirement text.
+
 ## plugin 0.4.5: unified manual-action / honesty taxonomy + 3 new static detectors (2026-06-19)
 
 Engine feature: every venue check now reports an honest status, and "checkable-in-principle" items
@@ -282,12 +293,6 @@ that were stubbed are now real detectors.
   `JASA-REPRO-RNG` → `seeded_rng`.
 - Added `author_action` / `how` / `self_check` guidance to the remaining `manual_author_action` checks
   across aea, ajps, jop, econsoc, apsr, jasa, worldbank.
-- World Bank coverage completion (the gaps Mateo Servent's audit surfaced): new checks `WB-DATA-RIGHTS`
-  (rights statement), `WB-MANUSCRIPT` (final manuscript), `WB-RAW-OUTPUTS` (raw tables/figures), and
-  `WB-CODE-BUILDS-EXHIBITS` (code creates all exhibits and in-text numbers), each with a verbatim
-  `policy_quote`; extended `WB-DATA-AVAILABILITY` to mention the rights statement and per-dataset
-  source/URL/access-year; added the "guides future readers" / "guidance for the reviewer" hints to the
-  `WB-README-SECTIONS` requirement text.
 - Schema: `not_implemented` added to the status enum; optional `author_action` / `how` / `self_check`
   / `needs_detector` fields and a `not_implemented` summary count.
 - Command docs: `check.md` (and the Codex check skill) present `needs_author_action` items as a
@@ -297,8 +302,10 @@ that were stubbed are now real detectors.
 - Tests: schema test covers the new statuses/fields; added a test that a manual_author_action check's
   detail equals its author_action-or-requirement, and a test that the 4 reclassified checks compute a
   real status. 67 passing.
-- Version bumped 0.4.3 → 0.4.5 across all six version files (the Claude + Codex manifests, both
-  marketplace.json files, pyproject.toml, __init__.py).
+- Version bumped to 0.4.5 across all six version files (the Claude + Codex manifests, both
+  marketplace.json files, pyproject.toml, __init__.py). The World Bank coverage completion (0.4.4
+  above) shipped in the same build; the changelog lists it separately to keep the version sequence
+  continuous.
 
 <!-- Append new entries above this line. Each entry: bump rules_version, list added/changed rule ids
      and the Line 2 lesson(s) they were promoted from. -->

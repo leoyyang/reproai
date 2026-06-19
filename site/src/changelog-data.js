@@ -51,6 +51,13 @@ export const changelog = {
           tag: "Improved",
           text: "The reproducible-parallel-results check now reads your R code directly: if a parallel loop draws random numbers without a fixed, reproducible stream, it tells you to switch to doRNG and regenerate the affected tables.",
         },
+      ],
+    },
+    {
+      version: "0.4.4",
+      date: "June 19, 2026",
+      title: "World Bank venue: completing the reproducibility checklist.",
+      changes: [
         {
           tag: "Improved",
           text: "World Bank venue: completes the checklist with the rights statement confirming you had legitimate access to the data, the final manuscript, the paper's tables and figures in raw form, and the expectation that code creates every exhibit and in-text number. Gaps suggested by Mateo Servent (World Bank).",
