@@ -66,6 +66,17 @@ Then confirm the host has the commands:
 
 If `reproai --version` is not found, the engine `pip install` step did not complete — rerun it.
 
+## Step 4 — stay current
+
+ReproAI's rule set and venue profiles are **data that keeps evolving** as the downstream pipeline sees
+more replication packages. A fresh install already ships the latest, so right after installing there is
+nothing more to pull. But before a diagnose on an existing install, make sure you are current:
+
+- Run `/reproai:update` (Claude Code) to **see** your installed versions — note that this command only
+  reports; it does not change anything itself.
+- To actually pull the latest rules + venue profiles, run the **Update** step below (the `pip install -U`
+  command refreshes the engine where the rules live).
+
 ## Update
 
 Refresh **both** the plugin (commands) and the engine (rules + venue profiles).
