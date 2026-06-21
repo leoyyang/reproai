@@ -238,6 +238,17 @@ body {
 .card p { color: var(--ink-soft); font-size: 15px; line-height: 1.6; margin: 0 0 16px; }
 .card code { font-family: var(--mono); font-size: 12.5px; background: var(--paper-3); padding: 2px 6px; border-radius: 5px; color: var(--red-dark); }
 .card p.term-note { margin: 14px 0 0; font-size: 13px; line-height: 1.55; color: var(--ink-faint); }
+
+/* install · "with your AI assistant" copyable prompt card (sits atop the manual install) */
+.ai-install-row { margin-bottom: 22px; }
+.ai-install { border-color: #cdd9e6; }
+.ai-install .term.ai-prompt { margin-top: 18px; padding: 13px 16px 15px; }
+.ai-prompt .cite-label-row { margin-bottom: 10px; }
+.ai-prompt .cite-label { margin: 0; }
+.ai-prompt-text {
+  white-space: normal; word-break: break-word; overflow-wrap: anywhere;
+  font-size: 13.2px; line-height: 1.7; color: var(--ink);
+}
 .term-notes { margin: 14px 0 0; padding-left: 18px; list-style: disc; }
 .term-notes li { font-size: 13px; line-height: 1.55; color: var(--ink-faint); margin-bottom: 5px; }
 .term-notes li:last-child { margin-bottom: 0; }

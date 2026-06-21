@@ -87,6 +87,12 @@ export const content = {
       emphasis: "ReproAI",
       sub: "ReproAI is a plugin for Claude Code and OpenAI Codex, backed by a small Python engine (3.10+) that the commands call. Install both once and it's available in every project.",
     },
+    aiLabel: "Prompt",
+    ai: {
+      title: "Install with your AI assistant",
+      prompt: "Install the ReproAI plugin for me. Fetch https://raw.githubusercontent.com/leoyyang/reproai/master/INSTALL_FOR_AI.md and follow it for my host (Claude Code or OpenAI Codex), running the commands and verifying it works.",
+      note: "Paste this into Claude Code or Codex and it installs ReproAI for you. Prefer the manual steps below? They're right here.",
+    },
     claude: {
       title: "Install · Claude Code",
       lines: [
@@ -131,7 +137,6 @@ export const content = {
       },
       footnote: "`/reproai:update` only prints your installed version and these steps; it does not update anything itself.",
     },
-    forAI: "For AI assistants: an AI assistant can install ReproAI by fetching the instructions file at `https://raw.githubusercontent.com/leoyyang/reproai/master/INSTALL_FOR_AI.md` and following it.",
   },
 
   usage: {

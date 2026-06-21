@@ -132,11 +132,38 @@ function Bib({ lines }) {
   );
 }
 
+function AiInstall({ ai }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    navigator.clipboard?.writeText(ai.prompt).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  };
+  return (
+    <div className="card ai-install">
+      <span className="redline" />
+      <h3>{ai.title}</h3>
+      <div className="term ai-prompt">
+        <div className="cite-label-row">
+          <div className="cite-label">{content.install.aiLabel}</div>
+          <button className="copy" onClick={copy}>{copied ? content.cite.copyDone : content.cite.copyIdle}</button>
+        </div>
+        <div className="term-line ai-prompt-text">{ai.prompt}</div>
+      </div>
+      <p className="term-note">{withCode(ai.note)}</p>
+    </div>
+  );
+}
+
 function Install() {
   const c = content.install;
   return (
     <section id="install" className="section">
       <SectionHead lead={c.head.lead} emphasis={c.head.emphasis} sub={c.head.sub} />
+      <div className="cards ai-install-row">
+        <AiInstall ai={c.ai} />
+      </div>
       <div className="cards two">
         <div className="card">
           <span className="redline" />
@@ -166,7 +193,6 @@ function Install() {
         </div>
       </div>
       <p className="update-footnote">{withCode(c.update.footnote)}</p>
-      <p className="update-footnote">{withCode(c.forAI)}</p>
     </section>
   );
 }
