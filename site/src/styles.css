@@ -245,7 +245,7 @@ body {
 .ai-install .term.ai-prompt { margin-top: 18px; padding: 13px 16px 15px; }
 .ai-prompt .cite-label-row { margin-bottom: 10px; }
 .ai-prompt .cite-label { margin: 0; }
-.ai-prompt-text {
+.ai-prompt .ai-prompt-text {
   white-space: normal; word-break: break-word; overflow-wrap: anywhere;
   font-size: 13.2px; line-height: 1.7; color: var(--ink);
 }
