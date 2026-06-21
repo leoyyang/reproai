@@ -166,6 +166,7 @@ function Install() {
         </div>
       </div>
       <p className="update-footnote">{withCode(c.update.footnote)}</p>
+      <p className="update-footnote">{withCode(c.forAI)}</p>
     </section>
   );
 }

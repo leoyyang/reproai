@@ -64,6 +64,10 @@ rule set is generic guidance and names no specific paper.
 ReproAI has two parts: the **plugin** (the slash commands) and a small **Python engine, 3.10+**
 (`reproai` CLI) that the commands call and that holds the rules and venue profiles. Install both.
 
+**For AI assistants:** an AI assistant can install ReproAI by fetching
+`https://raw.githubusercontent.com/leoyyang/reproai/master/INSTALL_FOR_AI.md` and following it.
+Human install steps follow below.
+
 **Claude Code**
 
 ```

@@ -131,6 +131,7 @@ export const content = {
       },
       footnote: "`/reproai:update` only prints your installed version and these steps; it does not update anything itself.",
     },
+    forAI: "For AI assistants: an AI assistant can install ReproAI by fetching the instructions file at `https://raw.githubusercontent.com/leoyyang/reproai/master/INSTALL_FOR_AI.md` and following it.",
   },
 
   usage: {
