@@ -7,6 +7,13 @@ rules in over time (improve-with-use).
 
 Versioning: `rules_version` is date-based `YYYY.MM.DD` (bump when a rule is added/changed/promoted).
 
+## plugin 0.4.7: fix invalid Claude plugin manifest (2026-06-23)
+
+- Removed unrecognized keys `$schema` and `displayName` from `claude-plugin/.claude-plugin/plugin.json`.
+  Claude Code's plugin-manifest validator rejects unknown keys, causing
+  `Failed to install: ... Unrecognized keys: "$schema", "displayName"` on install.
+- No functional change; version bumped so existing users get a clean reinstall.
+
 ## rules_version 2026.06.15
 
 - Initial author rule set: 28 rules (15 defect, 13 normalization), graded P0–P4 by downstream
