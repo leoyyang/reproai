@@ -141,6 +141,38 @@ def _cmd_verify(args: argparse.Namespace) -> int:
     return code
 
 
+def _cmd_map(args: argparse.Namespace) -> int:
+    root = Path(args.path).resolve()
+    if not root.is_dir():
+        print(f"error: not a directory: {root}", file=sys.stderr)
+        return 2
+    report = coordinator.output_map(root, args.manuscript)
+    if args.out:
+        Path(args.out).write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
+    if args.json:
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+        return 0
+    print(f"reproai map (advisory) — {root}")
+    if report["status"] != "ok":
+        print(f"  {report['status']}: {report.get('note', '')}")
+        return 0
+    s = report["summary"]
+    print(f"  manuscript: {report['manuscript']}")
+    print(f"  exhibits: {s['exhibits']}   package outputs: {s['package_outputs']}")
+    print(f"  exhibits with no producing output: {s['exhibits_without_output']}")
+    print(f"  outputs not used by any exhibit:   {s['outputs_without_exhibit']}")
+    print(f"  panel/count mismatches:            {s['panel_mismatches']}")
+    for e in report["exhibits_without_output"]:
+        label = f" ({e['label']})" if e.get("label") else ""
+        print(f"  NO OUTPUT   {e['kind'].title()} {e['number']}{label}: {', '.join(e['unmapped']) or '—'}")
+    for p in report["panel_mismatches"]:
+        print(f"  PANELS      Figure {p['number']}: {p['n_panels']} panel(s) drawn, {p['n_mapped']} mapped")
+    print("  (advisory only — reproai never issues a reproducibility verdict)")
+    if args.out:
+        print(f"  report written to: {args.out}")
+    return 0
+
+
 def _cmd_readme(args: argparse.Namespace) -> int:
     root = Path(args.path).resolve()
     if not root.is_dir():
@@ -255,6 +287,13 @@ def build_parser() -> argparse.ArgumentParser:
     verify.add_argument("--since", type=float, default=None, help="Epoch seconds; require artifacts modified at/after this time (run freshness).")
     verify.add_argument("--json", action="store_true", help="Print the full verify report as JSON.")
     verify.set_defaults(func=_cmd_verify)
+
+    mapper = sub.add_parser("map", help="ADVISORY: overlay a manuscript's figures/tables on the package's output nodes (outputs with no exhibit, exhibits with no output, panel mismatches). LaTeX-only; never a verdict, never in `check`.")
+    mapper.add_argument("path", help="Path to the replication package working directory.")
+    mapper.add_argument("--manuscript", required=True, metavar="TEX", help="Path to the manuscript LaTeX source (.tex).")
+    mapper.add_argument("--out", default=None, help="Write the full map report as JSON to this file.")
+    mapper.add_argument("--json", action="store_true", help="Print the full map report as JSON.")
+    mapper.set_defaults(func=_cmd_map)
 
     readme = sub.add_parser("readme", help="Scaffold a README draft from the package structure, or render README.md to PDF.")
     readme.add_argument("path", help="Path to the replication package working directory.")

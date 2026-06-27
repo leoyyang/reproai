@@ -4,7 +4,7 @@ from typing import Any
 
 from dataclasses import dataclass
 
-from .dependency_graph import Edge
+from .dependency_graph import Edge, _INCLUDE_KINDS
 from .inventory import FileEntry
 
 
@@ -21,15 +21,18 @@ class Orphans:
 
 
 def detect(entries: list[FileEntry], edges: list[Edge]) -> Orphans:
+    # referenced_missing is INCLUDE-level only: a do/source/import target that does not resolve.
+    # Unresolved data reads are NOT piled in here — they are confidence-gated by A14, so a relative
+    # read that is genuinely missing is a P0 while a dynamic/ambiguous one stays advisory.
     referenced_missing = [
         {"target": edge.dst, "referenced_by": edge.src}
         for edge in edges
-        if not edge.resolved
+        if edge.kind in _INCLUDE_KINDS and edge.status == "unresolved"
     ]
 
     code_paths = {e.path for e in entries if e.language in {"stata", "r", "python"}}
-    referenced = {edge.dst for edge in edges if edge.resolved}
-    callers = {edge.src for edge in edges}
+    referenced = {edge.dst for edge in edges if edge.kind in _INCLUDE_KINDS and edge.resolved}
+    callers = {edge.src for edge in edges if edge.kind in _INCLUDE_KINDS}
     unreferenced = sorted(
         path for path in code_paths
         if path not in referenced and path not in callers

@@ -45,6 +45,9 @@ _CLEAN_FILES = {
         """
     ),
     "analysis.R": '# --> Table 1\nlibrary(fixest)\nm <- feols(y ~ x, data = df)\netable(m, file = "output/tables/table1.tex")\n',
+    # a clean package ships the inputs its scripts read (A14): panel.dta and other.dta both resolve.
+    "data/panel.dta": "id\n1\n",
+    "data/other.dta": "id\n1\n",
     "data/panel_placeholder.csv": "id\n1\n",
     "README.md": "# README\n## Data Availability\n## Computational requirements\n## Instructions\n## Data Sources\n",
 }

@@ -40,7 +40,8 @@ def architecture_report(root, entries, edges, exports, orphans) -> dict[str, Any
         "files": [e.as_dict() for e in entries],
         "entry_points": [],
         "dependency_edges": [
-            {"from": e.src, "to": e.dst, "kind": e.kind, "resolved": e.resolved} for e in edges
+            {"from": e.src, "to": e.dst, "kind": e.kind, "resolved": e.resolved,
+             "status": e.status, "edge_class": e.edge_class} for e in edges
         ],
         "table_map": [
             {
@@ -96,6 +97,12 @@ def _fix_prompt(f: Finding) -> str:
         f"WHY IT HURTS DOWNSTREAM: {f.why_downstream or f.rationale}",
         f"TARGET FORM: {f.target_form}",
     ]
+    if f.output_changing:
+        lines.append(
+            "OUTPUT-CHANGING: applying this fix DELIBERATELY changes the realized output (e.g. a seed "
+            "fixes new random draws). This is an explicit exception to the lossless contract — never "
+            "auto-apply; the author must re-run and update the reported numbers."
+        )
     if f.lossless_note:
         lines.append(f"LOSSLESS BOUNDARY FOR THIS RULE: {f.lossless_note}")
     return "\n".join(lines)
@@ -120,6 +127,7 @@ def advisory_plan(root, findings: list[Finding]) -> dict[str, Any]:
             "rewrite": {
                 "mode": "propose_only" if f.propose_only else "llm_rewrite",
                 "lossless_note": f.lossless_note,
+                "output_changing": f.output_changing,
                 "fix_prompt": _fix_prompt(f),
             },
         })

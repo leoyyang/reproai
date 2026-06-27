@@ -45,6 +45,7 @@ class Check:
     how: str = ""
     self_check: str = ""
     needs_detector: str = ""
+    detector: str = ""  # the detector that produced this check; used by adversarial_reviewer, not reported
 
 
 def load_profile(venue: str) -> dict[str, Any]:
@@ -242,6 +243,7 @@ def run_profile(root: Path, entries: list[FileEntry], profile: dict[str, Any]) -
                 how=spec.get("how", "") or "",
                 self_check=spec.get("self_check", "") or "",
                 needs_detector=spec.get("needs_detector", "") or "",
+                detector=spec.get("detector", "") or "",
             )
         )
 

@@ -39,12 +39,13 @@ You point it at a messy replication package (Stata / R / Python). It:
 | `/reproai:comply` | Just the target-journal replication-package checklist (AEA, …). |
 | `/reproai:fix` | Apply the advisory fixes to a **copy** under a lossless contract; re-check; iterate. Chain: **A12 → N2 → D1** (anchor table comments → unroll loops → export per-table outputs). |
 | `/reproai:debug` | Smoke-test the (fixed) copy: run it, confirm injected table/figure outputs appear; ask the author on a runtime error. |
+| `/reproai:map` | **Advisory** overlay of the manuscript's figures/tables on the package's outputs (exhibits with no output, outputs with no exhibit, panel mismatches). LaTeX; never runs code; not part of `check`. |
 | `/reproai:update` | Show the installed knowledge version and how to update the rule set. |
 | `/reproai:contribute` | File a pre-filled GitHub issue for a missed rule, a false flag, or a new venue + its rules. You click Submit; reproai never posts. |
 
 ## What it checks (rule set)
 
-41 author-preventable rules across four families, each with a fix prompt and a per-rule
+45 author-preventable rules across four families, each with a fix prompt and a per-rule
 lossless boundary:
 
 - **Structural** — explicit data loads, stable includes, no mid-script `cd`, intermediate-data
@@ -64,16 +65,16 @@ rule set is generic guidance and names no specific paper.
 ReproAI has two parts: the **plugin** (the slash commands) and a small **Python engine, 3.10+**
 (`reproai` CLI) that the commands call and that holds the rules and venue profiles. Install both.
 
-**For AI assistants:** an AI assistant can install ReproAI by fetching
-`https://raw.githubusercontent.com/leoyyang/reproai/master/INSTALL_FOR_AI.md` and following it.
-Human install steps follow below.
+**Install or update with your AI assistant:** an AI assistant can install *or update* ReproAI by
+fetching `https://raw.githubusercontent.com/leoyyang/reproai/master/INSTALL_FOR_AI.md` and following
+it. The manual steps follow below.
 
 **Claude Code**
 
 ```
 /plugin marketplace add leoyyang/reproai
 /plugin install reproai@reproai                                          # plugin@marketplace
-pip install "git+https://github.com/leoyyang/reproai#subdirectory=core"  # the engine, on PATH
+python3 -m pip install "git+https://github.com/leoyyang/reproai#subdirectory=core"  # the engine, on PATH
 ```
 
 Both install globally — then run `/reproai:check` in any project that contains your replication package.
@@ -84,7 +85,7 @@ Both install globally — then run `/reproai:check` in any project that contains
 git clone https://github.com/leoyyang/reproai
 cd reproai
 ./codex-plugin/install.sh   # links the reproai skills into ~/.agents/skills
-pip install -e core         # put the reproai engine on PATH
+python3 -m pip install -e core         # put the reproai engine on PATH
 ```
 
 Then ask Codex for `/reproai-check` in any project.
@@ -99,7 +100,7 @@ Rules and venue profiles live in the engine, so refresh **both** the plugin (com
 /plugin marketplace update reproai
 /plugin update reproai                                                      # latest commands
 /reload-plugins
-pip install -U "git+https://github.com/leoyyang/reproai#subdirectory=core"  # latest rules + venues
+python3 -m pip install -U "git+https://github.com/leoyyang/reproai#subdirectory=core"  # latest rules + venues
 ```
 
 **OpenAI Codex**
@@ -107,7 +108,7 @@ pip install -U "git+https://github.com/leoyyang/reproai#subdirectory=core"  # la
 ```
 git -C reproai pull
 reproai/codex-plugin/install.sh                                             # relink skills
-pip install -U -e reproai/core                                              # latest rules + venues
+python3 -m pip install -U -e reproai/core                                              # latest rules + venues
 ```
 
 `/reproai:update` reports your installed version and these steps; it does not update anything itself.

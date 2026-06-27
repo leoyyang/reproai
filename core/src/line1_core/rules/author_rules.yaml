@@ -1,11 +1,12 @@
 schema_version: 3
-rules_version: "2026.06.19"
-fields: "id | category(structural|code-style|environment|normalization) | kind(defect|normalization) | priority(P0..P4 by downstream reproducibility cost) | rule | detection | languages | source_lessons | why_downstream | target_form | lossless_note | propose_only"
+rules_version: "2026.06.27"
+fields: "id | category(structural|code-style|environment|normalization) | kind(defect|normalization) | priority(P0..P4 by downstream reproducibility cost) | rule | detection | languages | source_lessons | why_downstream | target_form | lossless_note | propose_only | output_changing"
 rewrite_fields_legend:
   why_downstream: "Plain explanation of how this finding hurts a downstream reproducibility run — fed to the host LLM as the 'why' of a fix."
   target_form: "What the corrected code should look like — the goal state the host LLM rewrites toward."
   lossless_note: "The semantics-preserving boundary the host LLM must honor when rewriting this finding (what it may change vs must never touch)."
   propose_only: "true = too semantic for an automatic rewrite; the host LLM must only describe the fix to the author, never apply it (data re-derivation, dead-fallback load, sample/merge cardinality, estimator/formula, seeds, environment). Absent/false = eligible for LLM-applied lossless rewrite to a copy, author-reviewed."
+  output_changing: "true = applying the fix DELIBERATELY changes the realized output (e.g. setting a seed fixes new draw values). An explicit exception to the lossless boundary: the author must re-run and update the reported numbers. Always pairs with propose_only: true."
 priority_legend:
   P0: "Blocks reproduction — the downstream pipeline cannot run this as shipped."
   P1: "Large downstream cost — likely many fix-loop rounds / token burn / coefficient mismatch."
@@ -211,6 +212,34 @@ rules:
     why_downstream: "Each parallel worker draws from its own uninitialised stream, so a re-run produces different bootstrap CIs or simulation numbers than the paper reports. The downstream reproducibility check then fails to match, and the mismatch is silent."
     target_form: "Use the doRNG package for reproducible parallel streams: load doRNG, call `registerDoRNG(<seed>)` before the loop, and keep `%dopar%` (registerDoRNG makes it reproducible) or switch the operator to `%dorng%`. After the fix, regenerate the affected tables and figures, since the numbers settle once to new, now-stable values."
     lossless_note: "Adding reproducible RNG changes the random draws, so the bootstrap and simulation estimates and their intervals move once to new, reproducible values. This is not a formatting change: the author must re-run and update the reported numbers. Propose-only; never auto-apply."
+    propose_only: true
+    output_changing: true
+
+  - id: C8-unseeded-stochastic
+    category: environment
+    kind: defect
+    priority: P1
+    rule: "Author should set a seed before any stochastic operation (sampling, simulation, bootstrap, multiple imputation), so the draws are reproducible; without one, every run produces different numbers than the paper."
+    detection: "A script calls a random-draw operation (R sample/rnorm/runif/boot/Amelia/mice; Stata bootstrap/bsample/permute/simulate/runiform/rnormal) with no set.seed / set seed (nor any reproducible-parallel-RNG signal) anywhere in the file. The parallel %dopar% case is owned by C7."
+    languages: [stata, r]
+    source_lessons: ["end-to-end build: a nondeterministic build step made the regenerated output differ from the paper on re-run"]
+    why_downstream: "With no seed, the stochastic step draws fresh numbers every run, so the regenerated tables and figures never match the paper's reported values and the downstream reproducibility check fails --- silently, because the code itself runs fine."
+    target_form: "Set a seed appropriate to the BACKEND before the first draw, then regenerate the affected tables/figures: serial R --- set.seed(N); foreach %dopar% --- doRNG (registerDoRNG(N) / %dorng%); future/furrr --- future.seed = TRUE (or a seed); parallel::mclapply or parallel boot --- RNGkind(\"L'Ecuyer-CMRG\") + set.seed(N); Amelia / mice --- the seed= argument; Stata --- set seed N (and set rngstream under parallel). A set.seed before a %dopar% does nothing, so the seed must match how the code actually parallelizes."
+    lossless_note: "This is NOT a semantics-preserving change: adding a seed FIXES the realized random draws, so the bootstrap/simulation/imputation estimates and their intervals move once to new, now-stable values. The author must re-run and update the reported numbers. Propose-only; never auto-apply, and never frame as lossless."
+    propose_only: true
+    output_changing: true
+
+  - id: D7-codebook-coverage
+    category: structural
+    kind: normalization
+    priority: P3
+    rule: "Author should document every variable the analysis uses: a codebook (or data dictionary) should define each variable that appears in the estimation commands, so a replicator can tell what each regressor is."
+    detection: "The package ships a readable codebook / data-dictionary artifact, but one or more variables used in estimation commands do not appear anywhere in it (tolerant substring match). Advisory only; never a blocker."
+    languages: [stata, r]
+    source_lessons: ["best-practice review: analysis variables with no codebook entry slow a replicator's read of the model"]
+    why_downstream: "A regressor with no codebook entry leaves the replicator guessing what the variable is and how it was built, slowing the read of every model that uses it and making a coefficient mismatch harder to diagnose."
+    target_form: "Add a codebook entry (name, definition, source/derivation, units) for each analysis variable that is currently undocumented, so the codebook covers every variable the estimation commands reference."
+    lossless_note: "Documenting a variable is purely ADDITIVE --- it writes codebook text and changes no code, data, or result. The host LLM may DRAFT entries from the variable name and how it is used, but must clearly mark anything inferred for the author to confirm, and must not guess a definition it cannot support."
     propose_only: true
 
   - id: B11-rmd-chunk-in-r
@@ -498,6 +527,30 @@ rules:
     target_form: "Either wire the script into the master/run order if it is needed, or move it into a clearly labelled archive folder (or delete it) if it is exploratory, so the public path contains only what produces the results."
     lossless_note: "Whether a stray script is needed, archivable, or deletable is an author decision; it may be a helper sourced in a way the scan missed. Propose the reclassification; never auto-delete or move a script."
     propose_only: true
+
+  - id: A14-missing-input
+    category: structural
+    kind: defect
+    priority: P0
+    rule: "Author should ship every input a script reads, or fix the reference: a relative data read that points at a file the package does not contain --- and that no script writes --- will fail on the first command."
+    detection: "A use/read/import targets a RELATIVE literal filename that resolves to no shipped file, and no save/export/write command in the package produces a file of that name (so it is not a pipeline intermediate). Absolute-path reads are reported separately (B4); ambiguous and dynamic paths never raise this P0."
+    languages: [stata, r]
+    source_lessons: ["end-to-end build: a package passed check clean while a script read an input that was never shipped and no step produced"]
+    why_downstream: "Run in batch, the load command points at a file that is not in the package and that no earlier script creates, so the script aborts on the first real command with a file-not-found error and 0 results — a hard failure the author never sees interactively."
+    target_form: "Either add the missing input file to the package, or correct the reference to the shipped file the script actually needs (fix a typo'd name or path). If the data is genuinely restricted, document it in the README data-availability section and provide a public stand-in."
+    lossless_note: "May only correct the read reference to a file that demonstrably ships in the package (a clear typo/path fix to the same intended dataset). Must NOT invent a file, change the dataset stem, or alter any option. If nothing in the package matches, do not auto-apply — flag it as missing/restricted input for the author."
+
+  - id: A15-ambiguous-input-path
+    category: structural
+    kind: defect
+    priority: P2
+    rule: "Author should reference inputs and includes by a path that picks exactly one file: a bare basename that matches several shipped files resolves differently depending on the working directory."
+    detection: "A do/source/import/read target is a basename (or path) that matches more than one shipped file, with no exact relative-path match, so the dependency graph cannot deterministically say which file loads."
+    languages: [stata, r, python]
+    source_lessons: ["graph substrate: a basename collision was previously resolved to the first rglob hit, which is order-dependent"]
+    why_downstream: "Two files share the referenced basename, so which one the command loads depends on the run's working directory and search order; a different machine can pick the other file and silently change the analysis, with no error to signal it."
+    target_form: "Make the reference unambiguous: give the path that selects the intended file (e.g. `data/clean/panel.dta` rather than `panel.dta`), or rename one of the colliding files so the names no longer collide."
+    lossless_note: "May only make the reference path explicit to the ONE file the author intends among the collisions. If which file is intended cannot be determined from the package structure, do NOT auto-apply — describe the collision and the candidate files for the author to resolve."
 
   - id: N5-unsafe-filename
     category: normalization

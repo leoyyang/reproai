@@ -6,11 +6,12 @@ replication packages. It is a thin host adapter over the SAME deterministic Pyth
 
 ## What ships here
 
-- `.agents/skills/reproai-*/SKILL.md` — the five workflows (recommended reusable layer):
+- `.agents/skills/reproai-*/SKILL.md` — the six workflows (recommended reusable layer):
   - `reproai-check` — static pre-diagnose → 4 JSON reports
   - `reproai-comply` — venue compliance checklist only
   - `reproai-fix` — LLM rewrites a COPY under a lossless contract; re-check; iterate (A12→N2→D1)
   - `reproai-debug` — smoke-test the fixed copy; ask the author on a runtime error
+  - `reproai-map` — advisory overlay of manuscript exhibits on package outputs (LaTeX; outside check)
   - `reproai-update` — knowledge version + update path
 - `.codex-plugin/plugin.json` — Codex plugin manifest
 - `install.sh` — register the marketplace / link skills

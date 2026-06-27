@@ -122,6 +122,19 @@ unguarded `_b[]` after `mi estimate` halts (APSR2018), `keep`-exclusion of a lat
 keeplists, a generic keep/undefined-variable detector is false-positive-prone and would erode
 author trust; only the safe `drop`/`rename`-then-reuse subset is detected, via A7).
 
+## C. Graph substrate + new detectors (0.4.7, 2026-06-27)
+
+The 0.4.7 detectors (A5 now emitting, A14 missing-input, A15 ambiguous-input, C8 unseeded-stochastic,
+D7 codebook-coverage) and the `reproai map` command were **motivated** by a real end-to-end build: a
+package that passed `reproai check` clean at several points where it did not yet reproduce (a missing
+input, a nondeterministic step, output→exhibit mapping). They are currently validated by **fixtures —
+a positive AND a negative case per detector** (`tests/test_graph_substrate.py`,
+`tests/test_missing_inputs.py`, `tests/test_phase3_detectors.py`, `tests/test_output_map.py`), with
+the negative fixtures as the real deliverable (they are what catch the next false positive in CI).
+Real-package corpus validation in the style of §A is still owed; until then these are graded as
+fixture-validated, not corpus-confirmed. Design note:
+`docs/design/2026-06-26-graph-and-detector-roadmap.md`; change list: `CHANGELOG.md` (plugin 0.4.7).
+
 ## Honesty note
 
 These numbers are about **static catchability**, not "first-try pass guarantee". Pre-diagnose

@@ -70,6 +70,14 @@ function EnginePanel() {
         <motion.div className="engine-evolve" variants={item}>
           <span className="evolve-dot" aria-hidden="true" />
           <div className="evolve-text">
+            <code className="stage-cmd">{content.engine.map.cmd}</code>
+            <span className="evolve-note">{content.engine.map.note}</span>
+          </div>
+        </motion.div>
+
+        <motion.div className="engine-evolve" variants={item}>
+          <span className="evolve-dot" aria-hidden="true" />
+          <div className="evolve-text">
             <code className="stage-cmd">{content.engine.update.cmd}</code>
             <span className="evolve-note">{content.engine.update.note}</span>
           </div>
@@ -164,35 +172,6 @@ function Install() {
       <div className="cards ai-install-row">
         <AiInstall ai={c.ai} />
       </div>
-      <div className="cards two">
-        <div className="card">
-          <span className="redline" />
-          <h3>{c.claude.title}</h3>
-          <Term lines={c.claude.lines} />
-          <p className="term-note">{withCode(c.claude.note)}</p>
-        </div>
-        <div className="card">
-          <span className="redline" />
-          <h3>{c.codex.title}</h3>
-          <Term lines={c.codex.lines} />
-          <p className="term-note">{withCode(c.codex.note)}</p>
-        </div>
-      </div>
-      <div className="cards two update-cards">
-        <div className="card">
-          <span className="redline" />
-          <h3>{c.update.claude.title}</h3>
-          <Term lines={c.update.claude.lines} />
-          <p className="term-note">{withCode(c.update.claude.note)}</p>
-        </div>
-        <div className="card">
-          <span className="redline" />
-          <h3>{c.update.codex.title}</h3>
-          <Term lines={c.update.codex.lines} />
-          <p className="term-note">{withCode(c.update.codex.note)}</p>
-        </div>
-      </div>
-      <p className="update-footnote">{withCode(c.update.footnote)}</p>
     </section>
   );
 }

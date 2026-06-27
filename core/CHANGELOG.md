@@ -327,5 +327,52 @@ Documentation fix — no rule, venue, or engine-behavior change.
 - Version bumped to 0.4.6 across all six version files (the Claude + Codex manifests, both
   marketplace.json files, pyproject.toml, __init__.py).
 
+## plugin 0.4.7 — graph substrate + missing-input / nondeterminism / codebook detectors + `map` (rules_version 2026.06.27)
+
+Promoted from an end-to-end build of a real replication package against `reproai check`: the package
+passed clean at points where it did not yet reproduce. The work that decided fidelity sat outside the
+engine's view (a missing input, a nondeterministic step, mapping outputs to paper exhibits), so this
+release tightens the static foundation and adds a manuscript-aware advisory layer — without weakening
+the determinism the tool rests on. Design note: `docs/design/2026-06-26-graph-and-detector-roadmap.md`.
+
+- **Graph substrate (item A).** `dependency_graph.py` now extracts the path literal from inside a
+  call's balanced parens, so `source(file.path(CODE,"x.R"))` / `paste0()` / `here()` wrappers resolve
+  (the old engine matched only a bare `source("literal")`). Added typed **read** and **write** edges
+  (R `read_csv`/`readRDS`/`ggsave`/`write.csv`/`saveRDS`/...; Stata `use`/`import`/`save`/`graph
+  export`/`esttab`/...). `_resolve` is deterministic: candidates are sorted and a basename collision is
+  tagged **ambiguous** (3-tier `status`: resolved / unresolved / ambiguous), never the first rglob hit.
+  `Edge` keeps `resolved` as a back-compat property; `orphans.referenced_missing` is now include-only.
+- **A5-stable-includes now emits.** It was defined but never fired (unresolved includes showed only in
+  `orphans`). It now raises a P0 for a do/source/import literal that resolves to no shipped file.
+- **A14-missing-input (P0, NEW), confidence-gated.** A *relative* literal data read that is absent and
+  produced by **no write edge** is a P0. A read produced by a write edge (a pipeline intermediate), an
+  absolute path (B4's domain), an ambiguous basename, or a Python read never raises the P0 — never
+  block on a guess. **A15-ambiguous-input-path (P2, NEW)** surfaces a basename collision as advisory.
+- **False-positive tightening (item E).** `B4` no longer reads a regex-escape literal like
+  `gsub("\\|", ...)` as a UNC path (the UNC branch now requires a hostname char). `D6` ignores the
+  package-root token, expands brace/ellipsis globs (`wave_{1,2}.dta`), and skips a path documented as
+  deliberately absent (restricted / not included).
+- **C8-unseeded-stochastic (P1, propose-only, output-changing, NEW).** A random draw (R
+  `sample`/`rnorm`/`boot`/`Amelia`/`mice`; Stata `bootstrap`/`bsample`/`permute`/`simulate`) with no
+  seed, with **backend-aware** target guidance (serial `set.seed`; `%dopar%`→doRNG; future/furrr→
+  `future.seed`; mclapply/parallel boot→`L'Ecuyer-CMRG`; Amelia/mice→`seed=`; Stata `set seed`). C7
+  keeps the parallel `%dopar%` case so the two never double-fire. New `output_changing` rule field
+  (also set on C7): an explicit, host-LLM-keyable exception to the lossless contract. `adversarial_
+  reviewer` flags the conflict when C8 fires and a venue still asks for raw-to-analysis code.
+- **D7-codebook-coverage (P3, advisory, NEW).** When a readable codebook ships, variables used in
+  estimation commands but absent from it are reported (tolerant substring match; never P0).
+- **`reproai map` (NEW command), advisory, kept OUT of `check`.** Overlays a LaTeX manuscript's
+  figure/table inventory on the package's write nodes: exhibits with no producing output, outputs no
+  exhibit uses, and panel/count mismatches. LaTeX-only v1, degrades gracefully, never a verdict.
+  Added `coordinator.output_map`, `output_map.py`, the CLI `map` subcommand, an
+  `output_map_report.schema.json`, and the `map` command/skill in both the Claude and Codex plugins.
+- Architecture-report schema: `dependency_edges.kind` enum gains `read`/`write`; added optional
+  `status` / `edge_class`. Advisory item `rewrite` gains `output_changing`.
+- Tests: 47 new (positive **and** negative fixtures per detector — the negative fixtures are the real
+  deliverable). 114 passing.
+- Also folded into 0.4.7: the Claude plugin manifest fix (invalid `$schema` / `displayName` removed,
+  commit 9c4a22f). Version is 0.4.7 across all version files — the manifests were bumped in that
+  commit; this change brings `pyproject.toml` and `__init__.py` back into lockstep at 0.4.7.
+
 <!-- Append new entries above this line. Each entry: bump rules_version, list added/changed rule ids
      and the Line 2 lesson(s) they were promoted from. -->

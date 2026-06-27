@@ -27,12 +27,12 @@ Run the first two commands **inside Claude Code** (slash commands), and the `pip
 ```
 /plugin marketplace add leoyyang/reproai
 /plugin install reproai@reproai                                          # plugin@marketplace
-pip install "git+https://github.com/leoyyang/reproai#subdirectory=core"  # the engine, on PATH
+python3 -m pip install "git+https://github.com/leoyyang/reproai#subdirectory=core"  # the engine, on PATH
 ```
 
 - `/plugin marketplace add …` — runs in Claude Code. Success: the `reproai` marketplace is registered.
 - `/plugin install reproai@reproai` — runs in Claude Code. Success: the `/reproai:*` commands appear.
-- `pip install …` — runs in the user's shell. Success: pip reports the `reproai` engine installed.
+- `python3 -m pip install …` — runs in the user's shell. Success: pip reports the `reproai` engine installed.
 
 ## Step 2B — install in OpenAI Codex CLI
 
@@ -42,13 +42,13 @@ Run all of these in **the user's shell**:
 git clone https://github.com/leoyyang/reproai
 cd reproai
 ./codex-plugin/install.sh   # links the reproai skills into ~/.agents/skills
-pip install -e core         # put the reproai engine on PATH
+python3 -m pip install -e core         # put the reproai engine on PATH
 ```
 
 - `git clone …` — shell. Success: a `reproai/` directory exists.
 - `cd reproai` — shell. Success: you are in the repo root.
 - `./codex-plugin/install.sh` — shell. Success: it prints `linked skill: reproai-*` lines.
-- `pip install -e core` — shell. Success: pip reports the `reproai` engine installed (editable).
+- `python3 -m pip install -e core` — shell. Success: pip reports the `reproai` engine installed (editable).
 
 ## Step 3 — verify
 
@@ -64,7 +64,7 @@ Then confirm the host has the commands:
 - **Claude Code**: the `/reproai:check` command is listed/available (e.g. type `/reproai:` to see it).
 - **Codex**: the `reproai-check` skill is available (linked under `~/.agents/skills/`).
 
-If `reproai --version` is not found, the engine `pip install` step did not complete — rerun it.
+If `reproai --version` is not found, the engine `python3 -m pip install` step did not complete — rerun it.
 
 ## Step 4 — stay current
 
@@ -74,7 +74,7 @@ nothing more to pull. But before a diagnose on an existing install, make sure yo
 
 - Run `/reproai:update` (Claude Code) to **see** your installed versions — note that this command only
   reports; it does not change anything itself.
-- To actually pull the latest rules + venue profiles, run the **Update** step below (the `pip install -U`
+- To actually pull the latest rules + venue profiles, run the **Update** step below (the `python3 -m pip install -U`
   command refreshes the engine where the rules live).
 
 ## Update
@@ -87,14 +87,14 @@ Refresh **both** the plugin (commands) and the engine (rules + venue profiles).
 /plugin marketplace update reproai
 /plugin update reproai          # latest commands
 /reload-plugins
-pip install -U "git+https://github.com/leoyyang/reproai#subdirectory=core"  # latest rules + venues
+python3 -m pip install -U "git+https://github.com/leoyyang/reproai#subdirectory=core"  # latest rules + venues
 ```
 
 **OpenAI Codex CLI** — in the user's shell (pull the repo, then):
 
 ```
 reproai/codex-plugin/install.sh   # relink skills
-pip install -U -e reproai/core
+python3 -m pip install -U -e reproai/core
 ```
 
 ---

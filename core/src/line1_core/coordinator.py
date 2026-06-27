@@ -4,7 +4,7 @@ from typing import Any
 
 from pathlib import Path
 
-from . import dependency_graph, inventory, orphan_detector, reports, rule_engine, stata_esttab_parser, venue_engine, versions
+from . import dependency_graph, inventory, orphan_detector, output_map as _output_map, reports, rule_engine, stata_esttab_parser, venue_engine, versions
 from .adversarial_reviewer import audit_priorities, cross_check
 
 
@@ -43,6 +43,12 @@ def check(root: Path, venue: str | None) -> dict[str, Any]:
             "priority_violations": priority_violations,
         },
     }
+
+
+def output_map(root: Path, manuscript: str) -> dict[str, Any]:
+    """Overlay a manuscript's exhibit inventory on the package's output nodes. Advisory, LaTeX-only,
+    kept OUT of check() so it can never affect the core's clean-pass credibility."""
+    return _output_map.build(root.resolve(), manuscript)
 
 
 def readme_scaffold(root: Path) -> str:

@@ -8,12 +8,15 @@ from pathlib import Path
 
 import yaml
 
-from .dependency_graph import Edge
+from .dependency_graph import Edge, _INCLUDE_KINDS, _READ_KINDS
 from .inventory import FileEntry
 
 _RULES_FILE = Path(__file__).parent / "rules" / "author_rules.yaml"
 
-_ABS_PATH = re.compile(r'["\']?((?:[A-Za-z]:\\|\\\\|/Users/|/home/|~/)[^"\'\r\n]+)["\']?')
+# B4 absolute path. The UNC branch requires a hostname letter after `\\` so a regex-escape literal
+# like gsub("\\|", ...) (two backslashes then a metachar) is no longer mistaken for a UNC path.
+_ABS_PATH = re.compile(r'["\']?((?:[A-Za-z]:\\|\\\\[A-Za-z]|/Users/|/home/|~/)[^"\'\r\n]+)["\']?')
+_ABS_TARGET = re.compile(r'^\s*(?:[A-Za-z]:\\|\\\\|/|~)')
 _LOOP_HEAD = re.compile(r'^\s*(foreach|forvalues|forv|while|for)\b', re.IGNORECASE)
 _EXPORT_FIXED = re.compile(r'\b(esttab|estout|outreg2?|putexcel|tabout)\b[^\r\n]*using\s+["\']?([^\s"\'`,]+)', re.IGNORECASE)
 _TS_OP = re.compile(r'(?<![\w.])([LDF]\d*\.\w+)')
@@ -84,6 +87,38 @@ _FILE_EXISTS_GUARD = re.compile(r'(confirm\s+file|file\.exists|os\.path\.exists|
 _TABLE_HEADER = re.compile(r'^\s*(?:\*+|//+|#+)\s*\**\s*(Table|Tabla)\s+([A-Za-z]?\.?\d+)\b', re.IGNORECASE)
 _FIGURE_HEADER = re.compile(r'^\s*(?:\*+|//+|#+)\s*\**\s*(Figure|Fig\.?|Figura)\s+([A-Za-z]?\.?\d+)\b', re.IGNORECASE)
 
+# C8: stochastic operation with no seed (the generalization of C7, which owns the parallel %dopar%
+# case). A seed FIXES the realized draws, so this is output-changing, not lossless.
+_R_STOCHASTIC = re.compile(
+    r'(?<![\w.])(sample|sample_n|slice_sample|rnorm|runif|rbinom|rpois|rbeta|rgamma|rexp|'
+    r'rmultinom|rnbinom|rcauchy|rweibull|rchisq|rt|boot|amelia|mice)\s*\(', re.IGNORECASE)
+_R_SEED_SIGNAL = re.compile(
+    r'set\.seed\s*\(|registerDoRNG|%dorng%|clusterSetRNGStream|future\.seed\s*=|RNGkind\s*\(', re.IGNORECASE)
+_R_FUTURE_BACKEND = re.compile(r'\bfurrr\b|\bfuture_(?:map|lapply|apply|walk)\b|%<-%|\bfuture\s*\(', re.IGNORECASE)
+_R_PARALLEL_BACKEND = re.compile(r'mclapply|makeCluster|parLapply|mcmapply|mcsapply', re.IGNORECASE)
+_STATA_STOCHASTIC = re.compile(
+    r'(?<![\w.])(bootstrap|bsample|permute|simulate)\b|runiform\s*\(|rnormal\s*\(|'
+    r'rbinomial\s*\(|rpoisson\s*\(|rgamma\s*\(|rbeta\s*\(', re.IGNORECASE)
+_STATA_SEED = re.compile(r'\bset\s+seed\b|\bset\s+rngstream\b', re.IGNORECASE)
+
+# D7: variables used in estimation but absent from a shipped codebook. Tolerant, advisory, never P0.
+_CODEBOOK_NAME = re.compile(
+    r'codebook|data[\s_-]?dictionar|variable[\s_-]?(?:list|definition|description|name)|var[\s_-]?list|datadict',
+    re.IGNORECASE)
+_CODEBOOK_EXT = {".md", ".txt", ".tex", ".csv", ".rst"}
+_VAR_TOKEN = re.compile(r'[A-Za-z][A-Za-z0-9_]{2,}')
+_STATA_EST_VARLIST = re.compile(
+    r'^\s*' + _STATA_PREFIX + r'(?:reg|regress|areg|xtreg|reghdfe|ivreg\w*|ivregress|ivreghdfe|'
+    r'logit|probit|tobit|glm|xtivreg\w*|melogit|mlogit|poisson|nbreg|xtpoisson)\s+([^,\r\n]+)',
+    re.IGNORECASE | re.MULTILINE)
+_STATA_FACTOR_PREFIX = re.compile(r'\b[ibco]*\d*\.(\w+)', re.IGNORECASE)
+_R_FORMULA = re.compile(r'([A-Za-z_.][\w.]*)\s*~\s*([^,\)\r\n]+)')
+_VAR_STOP = {
+    "using", "cluster", "robust", "vce", "absorb", "weight", "weights", "fweight", "pweight",
+    "aweight", "iweight", "subset", "data", "factor", "log", "exp", "sqrt", "poly", "true",
+    "false", "null", "and", "the", "for", "with",
+}
+
 
 @dataclass
 class Finding:
@@ -99,6 +134,7 @@ class Finding:
     target_form: str = ""
     lossless_note: str = ""
     propose_only: bool = False
+    output_changing: bool = False
 
 
 def load_rules() -> list[dict[str, Any]]:
@@ -336,6 +372,77 @@ def _detect_nonreproducible_parallel_rng(path: str, text: str) -> list[dict[str,
         if _PAR_DOPAR.search(_mask_r_strings_comments(line)):
             return [_ev(path, i, line)]
     return []
+
+
+def _detect_unseeded_stochastic(path: str, text: str, lang: str) -> list[dict[str, Any]]:
+    if lang == "r":
+        masked = _mask_r_strings_comments(text)
+        if _PAR_DOPAR.search(masked):
+            return []  # the parallel %dopar% case is C7's, not C8's
+        if _R_SEED_SIGNAL.search(masked) or not _R_STOCHASTIC.search(masked):
+            return []
+        if _R_FUTURE_BACKEND.search(masked):
+            hint = "future/furrr backend: set future.seed = TRUE (or a seed)"
+        elif _R_PARALLEL_BACKEND.search(masked):
+            hint = "parallel backend: RNGkind(\"L'Ecuyer-CMRG\") then set.seed(N)"
+        elif re.search(r'(?<![\w.])amelia\s*\(', masked, re.IGNORECASE):
+            hint = "Amelia: pass the seed= argument"
+        elif re.search(r'(?<![\w.])mice\s*\(', masked, re.IGNORECASE):
+            hint = "mice: pass the seed= argument"
+        else:
+            hint = "serial draw: set.seed(N) before the first draw"
+        for i, line in enumerate(text.splitlines(), start=1):
+            if _R_STOCHASTIC.search(_mask_r_strings_comments(line)):
+                return [_ev(path, i, f"stochastic draw with no seed set --- {hint}")]
+        return []
+    # stata
+    if _STATA_SEED.search(text) or not _STATA_STOCHASTIC.search(text):
+        return []
+    for i, line in enumerate(text.splitlines(), start=1):
+        stripped = line.strip()
+        if stripped.startswith("*") or stripped.startswith("//"):
+            continue
+        if _STATA_STOCHASTIC.search(line):
+            return [_ev(path, i, "stochastic command with no `set seed` --- set seed N (set rngstream under parallel)")]
+    return []
+
+
+def _used_variables(text: str, lang: str) -> set[str]:
+    used: set[str] = set()
+    if lang == "stata":
+        for m in _STATA_EST_VARLIST.finditer(text):
+            varlist = _STATA_FACTOR_PREFIX.sub(r'\1', m.group(1))
+            used |= {t.lower() for t in _VAR_TOKEN.findall(varlist)}
+    elif lang == "r":
+        for m in _R_FORMULA.finditer(text):
+            for side in (m.group(1), m.group(2)):
+                cleaned = re.sub(r'[A-Za-z_.][\w.]*\s*\(', ' ', side)  # drop function-call heads, keep their args
+                used |= {t.lower() for t in _VAR_TOKEN.findall(cleaned)}
+    return used
+
+
+def _detect_codebook_coverage(root: Path, entries: list[FileEntry], texts: dict[str, str]) -> list[dict[str, Any]]:
+    cb_text: str | None = None
+    cb_path: str | None = None
+    for e in entries:
+        name = Path(e.path).name
+        if _CODEBOOK_NAME.search(name) and Path(name).suffix.lower() in _CODEBOOK_EXT:
+            try:
+                cb_text = (root / e.path).read_text(encoding="utf-8", errors="replace").lower()
+                cb_path = e.path
+                break
+            except OSError:
+                continue
+    if cb_text is None:  # no readable codebook -> D7 is silent (D4 owns "no documentation at all")
+        return []
+    used: set[str] = set()
+    for path, text in texts.items():
+        used |= _used_variables(text, _lang_of(entries, path))
+    undocumented = sorted(v for v in used if v not in _VAR_STOP and v not in cb_text)
+    if not undocumented:
+        return []
+    return [_ev(cb_path, None,
+                f"{len(undocumented)} analysis variable(s) absent from the codebook: {', '.join(undocumented[:12])}")]
 
 
 def _detect_rmd_chunk(path: str, text: str) -> list[dict[str, Any]]:
@@ -606,6 +713,39 @@ def _readme_pathish(tok: str) -> bool:
     return tok.endswith("/") or tok.lower().endswith(_README_PATHISH_EXT)
 
 
+# README wording that documents a path as deliberately absent (restricted/not shipped). When it sits
+# near a backtick path token, the token is a known omission, not a packaging mistake — do not flag it.
+_ABSENT_WORDING = re.compile(
+    r'not\s+(?:included|provided|shipped|available|public|distribut\w*|part\s+of)|'
+    r'restrict\w*|confidential|propriet\w*|available\s+(?:up)?on\s+request|by\s+request|'
+    r'cannot\s+be\s+(?:shared|included)|excluded|obtain\w*\s+(?:from|separately)',
+    re.IGNORECASE,
+)
+_BRACE = re.compile(r'\{([^{}]*)\}')
+_BRACE_RANGE = re.compile(r'^(\d+)\.\.(\d+)$')
+
+
+def _expand_braces(tok: str) -> list[str]:
+    """Expand a brace/ellipsis glob like `wave_{1,2,3}.dta` or `fig_{1..3}.pdf` into concrete names,
+    so each member is checked against the package rather than the literal token being rejected."""
+    m = _BRACE.search(tok)
+    if not m:
+        return [tok]
+    opts: list[str] = []
+    for opt in m.group(1).split(","):
+        opt = opt.strip()
+        rng = _BRACE_RANGE.match(opt)
+        if rng and int(rng.group(1)) <= int(rng.group(2)) <= int(rng.group(1)) + 64:
+            opts.extend(str(i) for i in range(int(rng.group(1)), int(rng.group(2)) + 1))
+        else:
+            opts.append(opt)
+    prefix, suffix = tok[:m.start()], tok[m.end():]
+    out: list[str] = []
+    for p in opts:
+        out.extend(_expand_braces(prefix + p + suffix))
+    return out
+
+
 def _detect_readme_missing_paths(root: Path) -> list[dict[str, Any]]:
     readme = None
     try:
@@ -635,6 +775,7 @@ def _detect_readme_missing_paths(root: Path) -> list[dict[str, Any]]:
         rel = tok.strip().strip("`").lstrip("./").rstrip("/").lower()
         return not rel or rel in rels or Path(rel).name in names
 
+    root_token = root.name.lower()
     seen: set[str] = set()
     hits: list[dict[str, Any]] = []
     for m in _README_BACKTICK.finditer(text):
@@ -642,8 +783,15 @@ def _detect_readme_missing_paths(root: Path) -> list[dict[str, Any]]:
         if tok in seen:
             continue
         seen.add(tok)
-        if _readme_pathish(tok) and not resolves(tok):
-            hits.append(_ev(readme.name, None, f"README references `{tok}` but it is not in the package"))
+        if tok.lower().rstrip("/") == root_token:
+            continue  # the package's own root folder, not a missing sub-path
+        if _ABSENT_WORDING.search(text[max(0, m.start() - 200): m.start() + 200]):
+            continue  # documented as deliberately not shipped
+        candidates = _expand_braces(tok) if ("{" in tok and "}" in tok) else [tok]
+        for cand in candidates:
+            if _readme_pathish(cand) and not resolves(cand):
+                hits.append(_ev(readme.name, None, f"README references `{tok}` but it is not in the package"))
+                break
     return hits[:8]
 
 
@@ -679,6 +827,38 @@ def _detect_unsafe_filenames(root: Path, entries: list[FileEntry]) -> list[dict[
     return hits[:8]
 
 
+# A5 / A14 / A15: missing-input detection over the dependency graph, confidence-gated.
+#   A5  (P0): an unresolved INCLUDE target (do/source/import literal that resolves to no file).
+#   A14 (P0): an unresolved RELATIVE data READ literal, absent and produced by NO write edge.
+#   A15 (P2): a basename-collision (ambiguous) include/read — never a P0, surfaced as advisory.
+# A target produced by a write edge is a pipeline intermediate, not a missing input (D3 owns it). An
+# absolute-path read is B4's domain. A dynamic path (no literal) never reaches here — it has no edge.
+def _missing_inputs(edges: list[Edge], lang_of) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+    write_basenames = {Path(e.dst).name.lower() for e in edges if e.kind == "write"}
+    a5: list[dict[str, Any]] = []
+    a14: list[dict[str, Any]] = []
+    a15: list[dict[str, Any]] = []
+    for e in edges:
+        base = Path(e.dst).name
+        if e.status == "ambiguous":
+            if e.kind in _INCLUDE_KINDS or e.kind in _READ_KINDS:
+                a15.append(_ev(e.src, None, f"references '{base}' but the package ships more than one file with that name"))
+            continue
+        if e.status != "unresolved":
+            continue
+        if base.lower() in write_basenames:
+            continue  # produced elsewhere by a write edge -> intermediate, not a missing input
+        if e.kind in _INCLUDE_KINDS:
+            a5.append(_ev(e.src, None, f"includes '{e.dst}' but no such file ships in the package"))
+        elif e.kind in _READ_KINDS:
+            if _ABS_TARGET.match(e.dst):
+                continue  # absolute path -> B4 owns it; do not double-flag
+            if lang_of(e.src) not in {"stata", "r"}:
+                continue  # Python/Julia best-effort only -> never P0
+            a14.append(_ev(e.src, None, f"reads '{e.dst}' but no such file ships and no script writes it"))
+    return a5, a14, a15
+
+
 def run(root: Path, entries: list[FileEntry], edges: list[Edge], table_exports) -> list[Finding]:
     root = root.resolve()
     rules = {r["id"]: r for r in load_rules()}
@@ -704,6 +884,7 @@ def run(root: Path, entries: list[FileEntry], edges: list[Edge], table_exports) 
                 target_form=r.get("target_form", ""),
                 lossless_note=r.get("lossless_note", ""),
                 propose_only=bool(r.get("propose_only", False)),
+                output_changing=bool(r.get("output_changing", False)),
             )
         )
 
@@ -748,6 +929,17 @@ def run(root: Path, entries: list[FileEntry], edges: list[Edge], table_exports) 
     emit("N5-unsafe-filename", _detect_unsafe_filenames(root, entries),
          "A script or data filename contains a space or a character that breaks shells and tools.")
 
+    a5_ev, a14_ev, a15_ev = _missing_inputs(edges, lambda p: _lang_of(entries, p))
+    emit("A5-stable-includes", a5_ev,
+         "A do/source/import target does not resolve to any file shipped in the package.")
+    emit("A14-missing-input", a14_ev,
+         "A relative data read points at a file that is absent and that no script in the package writes.")
+    emit("A15-ambiguous-input-path", a15_ev,
+         "An include/read names a file by a basename that more than one shipped file matches, so which one loads depends on the working directory.")
+
+    emit("D7-codebook-coverage", _detect_codebook_coverage(root, entries, texts),
+         "A shipped codebook exists but some variables used in estimation commands are not documented in it.")
+
     for path, text in texts.items():
         lang = _lang_of(entries, path)
 
@@ -761,6 +953,8 @@ def run(root: Path, entries: list[FileEntry], edges: list[Edge], table_exports) 
                  "Estimation/figure present but no export saves the artifact to a relative output/ folder.")
             emit("D3-intermediate-data-hygiene", _detect_intermediate_data(root, path, text, edges, texts),
                  "Intermediate dataset written outside a canonical data/ folder is read by another script.")
+            emit("C8-unseeded-stochastic", _detect_unseeded_stochastic(path, text, lang),
+                 "Stochastic operation with no seed; a re-run draws different numbers than the paper reports.")
 
         if lang in {"stata", "r"}:
             loop_depth = 0

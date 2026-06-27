@@ -7,7 +7,6 @@
  *   from this file, so editing here is all you need. No sync step, nothing can drift.
  *
  * SYNTAX-HIGHLIGHTED BLOCKS are token lists rather than plain sentences:
- *   - install.claude.lines / install.codex.lines  → the two install terminals
  *   - usage.cli.runLines                           → the command-line terminal demo
  *   - cite.bibLines                                → the BibTeX block
  *   To edit them, change the text inside each token's  t: "..."  . The wrapper
@@ -75,6 +74,10 @@ export const content = {
       { cls: "p4", label: "P4", text: "README doesn't follow the journal's template" },
     ],
     advisoryNote: "Ranked by priority, from P0 blockers to P4 polish.",
+    map: {
+      cmd: "/reproai:map",
+      note: "Alongside the flow: maps the paper's figures and tables onto the code that produces them, flagging exhibits with no output and outputs with no exhibit. Advisory, LaTeX, never part of check.",
+    },
     update: {
       cmd: "/reproai:update",
       note: "Outside the per-package flow — the rule set keeps evolving as more packages are seen.",
@@ -89,53 +92,9 @@ export const content = {
     },
     aiLabel: "Prompt",
     ai: {
-      title: "Install with your AI assistant",
-      prompt: "Install the ReproAI plugin for me. Fetch https://raw.githubusercontent.com/leoyyang/reproai/master/INSTALL_FOR_AI.md and follow it for my host (Claude Code or OpenAI Codex), running the commands and verifying it works.",
-      note: "Paste this into Claude Code or Codex and it installs ReproAI for you. Prefer the manual steps below? They're right here.",
-    },
-    claude: {
-      title: "Install · Claude Code",
-      lines: [
-        [P("❯ "), SLASH("/plugin marketplace add"), TXT(" leoyyang/reproai")],
-        [P("❯ "), SLASH("/plugin install"), TXT(" reproai@reproai"), TXT("   "), OUT("# plugin@marketplace")],
-        [OUT("✓ Installed the reproai commands")],
-        [P("$ "), CMD("pip install"), TXT(" \"git+https://github.com/leoyyang/reproai#subdirectory=core\"")],
-        [OUT("✓ reproai engine on PATH")],
-      ],
-      note: "Two parts, in two places: inside Claude Code, `/plugin install` adds the commands; in your terminal, `pip install` adds the engine they call. Both install globally, so you can launch `claude` from any folder.",
-    },
-    codex: {
-      title: "Install · Codex",
-      lines: [
-        [P("$ "), CMD("git clone"), TXT(" https://github.com/leoyyang/reproai")],
-        [P("$ "), CMD("cd"), TXT(" reproai")],
-        [P("$ "), CMD("./codex-plugin/install.sh")],
-        [OUT("✓ linked skills → ~/.agents/skills")],
-        [P("$ "), CMD("pip install -e core"), TXT("  "), OUT("# reproai engine on PATH")],
-      ],
-      note: "Clones the repo, links the skills into Codex, and installs the same engine. Then ask Codex for `/reproai-check` in any project.",
-    },
-    update: {
-      claude: {
-        title: "Update · Claude Code",
-        lines: [
-          [P("❯ "), SLASH("/plugin marketplace update"), TXT(" reproai")],
-          [P("❯ "), SLASH("/plugin update"), TXT(" reproai"), TXT("   "), OUT("# latest commands")],
-          [P("❯ "), SLASH("/reload-plugins")],
-          [P("$ "), CMD("pip install -U"), TXT(" \"git+https://github.com/leoyyang/reproai#subdirectory=core\"")],
-        ],
-        note: "Inside Claude Code, the plugin update refreshes the commands; in your terminal, `pip install -U` refreshes the rules and venue profiles, which live in the engine.",
-      },
-      codex: {
-        title: "Update · Codex",
-        lines: [
-          [P("$ "), CMD("git -C"), TXT(" reproai "), CMD("pull")],
-          [P("$ "), CMD("reproai/codex-plugin/install.sh"), TXT("  "), OUT("# relink skills")],
-          [P("$ "), CMD("pip install -U -e"), TXT(" reproai/core")],
-        ],
-        note: "Pull the repo and relink the skills, then reinstall the engine. `pip install -U` (upgrade) reinstalls over your existing copy instead of skipping it, so new dependencies and the latest rules and venue profiles take effect.",
-      },
-      footnote: "`/reproai:update` only prints your installed version and these steps; it does not update anything itself.",
+      title: "Install or Update with your AI assistant",
+      prompt: "Install or update the ReproAI plugin for me. Fetch https://raw.githubusercontent.com/leoyyang/reproai/master/INSTALL_FOR_AI.md and follow it for my host (Claude Code or OpenAI Codex): if ReproAI isn't installed yet, install it; if it already is, update it to the latest. Run the commands and verify it works.",
+      note: "Paste this into Claude Code or Codex and it installs or updates ReproAI for you. Prefer to run the commands yourself? They're in the project README on GitHub.",
     },
   },
 

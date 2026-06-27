@@ -35,6 +35,22 @@ def cross_check(findings: list[Finding], checks: list[Check]) -> list[dict[str, 
             "check_ids": ["AEA-NO-ABS-PATHS"],
         })
 
+    # Constraint: do not flag a nondeterministic build (C8) and ALSO tell the author to ship
+    # raw-to-analysis code as the reproducibility path — an unseeded rebuild won't reproduce. The
+    # reconciled counsel is: seed the draw AND/OR ship the constructed analysis file.
+    rule_unseeded = any(f.rule_id == "C8-unseeded-stochastic" for f in findings)
+    rederive_checks = [c.check_id for c in checks if getattr(c, "detector", "") == "rederive_from_raw"]
+    if rule_unseeded and rederive_checks:
+        conflicts.append({
+            "kind": "rule_vs_venue",
+            "detail": "An unseeded stochastic step (C8) makes a raw-to-analysis rebuild non-reproducible, "
+                      "while the venue asks for raw-to-analysis code. Reconcile before advising: seed the "
+                      "draw so the rebuild is reproducible, and/or ship the constructed analysis file "
+                      "alongside the code — do not rely on an unseeded rebuild to reproduce the numbers.",
+            "rule_ids": ["C8-unseeded-stochastic"],
+            "check_ids": rederive_checks,
+        })
+
     return conflicts
 
 

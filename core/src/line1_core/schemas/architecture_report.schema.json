@@ -42,8 +42,10 @@
         "properties": {
           "from": { "type": "string" },
           "to": { "type": "string" },
-          "kind": { "type": "string", "enum": ["do", "source", "import", "data_use"] },
-          "resolved": { "type": "boolean" }
+          "kind": { "type": "string", "enum": ["do", "source", "import", "data_use", "read", "write"] },
+          "resolved": { "type": "boolean" },
+          "status": { "type": "string", "enum": ["resolved", "unresolved", "ambiguous"] },
+          "edge_class": { "type": "string", "enum": ["include", "read", "write"] }
         }
       }
     },

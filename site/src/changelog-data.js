@@ -31,6 +31,29 @@ export const changelog = {
 
   releases: [
     {
+      version: "0.4.7",
+      date: "June 27, 2026",
+      title: "Maps your exhibits to your code, and catches missing inputs and unseeded draws.",
+      changes: [
+        {
+          tag: "New",
+          text: "`/reproai:map` lines up your paper's figures and tables (from the LaTeX source) with the code that produces them, and points out an exhibit with no producing output, or an output no exhibit uses. It is advisory and never runs your code.",
+        },
+        {
+          tag: "Improved",
+          text: "The package scan now follows file-path helpers like `file.path()` and `here()` and tracks which files each script reads and writes. So it can flag a script that reads an input the package does not ship (and that no step creates), or a filename that matches two different shipped files.",
+        },
+        {
+          tag: "New",
+          text: "A check for unseeded randomness: if a script samples, bootstraps, or imputes without setting a seed, it points that out so your numbers come out the same on every run, and tells you the right way to set the seed for how your code is parallelized.",
+        },
+        {
+          tag: "New",
+          text: "A codebook check: if a variable used in your estimation is not described in a codebook you ship, it points it out. Plus fewer false alarms on the absolute-path and README path checks.",
+        },
+      ],
+    },
+    {
       version: "0.4.6",
       date: "June 19, 2026",
       title: "Clearer update instructions.",

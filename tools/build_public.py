@@ -20,7 +20,7 @@ _INTERNAL_ONLY = {"CHANGELOG.md", "VALIDATION.md"}
 
 _PUBLIC_RULE_FIELDS = [
     "id", "category", "kind", "priority", "rule", "detection", "languages",
-    "why_downstream", "target_form", "lossless_note", "propose_only",
+    "why_downstream", "target_form", "lossless_note", "propose_only", "output_changing",
 ]
 
 # Guard: refuse to ship if a paper-name pattern survives anywhere in the public output.
@@ -35,7 +35,7 @@ def _scrub_rules(internal: dict) -> dict:
     return {
         "schema_version": internal["schema_version"],
         "rules_version": internal["rules_version"],
-        "fields": "id | category | kind | priority(P0..P4) | rule | detection | languages | why_downstream | target_form | lossless_note | propose_only",
+        "fields": "id | category | kind | priority(P0..P4) | rule | detection | languages | why_downstream | target_form | lossless_note | propose_only | output_changing",
         "rules": public_rules,
     }
 
