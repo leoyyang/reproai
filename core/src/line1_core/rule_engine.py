@@ -78,7 +78,15 @@ _PROGRAM_DEF = re.compile(r'^\s*program\s+(?:define\s+)?(\w+)', re.IGNORECASE)
 
 # D1 artifact-output coverage
 _TABLE_EXPORT = re.compile(r'\b(esttab|estout|outreg2?|putexcel|putdocx|tabout|stargazer|texreg|htmlreg|etable|modelsummary|write[._]csv|write[._]dta|saveRDS|export\s+delimited)\b', re.IGNORECASE)
-_GRAPH_CMD = re.compile(r'^\s*(graph\s+(?:twoway|bar|box|matrix|combine|tw)|twoway|histogram|scatter|kdensity|coefplot|marginsplot|ggplot|plot\()', re.IGNORECASE)
+# Follow-up A: a figure producer may be ASSIGNED (`p <- ggplot(...)`, `g = qplot(...)`), which the
+# old `^\s*`-anchored pattern missed entirely. The optional assignment prefix
+# `(?:[\w.$]+\s*(?:<-|<<-|=)\s*)?` admits `name <-`/`name <<-`/`name =` before the producer while the
+# trailing producer alternation still gates (so `x <- mean(y)` does NOT match). Widening this makes
+# D1/gate STRICTER (an assigned plot now expects an export), so only HIGH-CONFIDENCE producers were
+# added: R `qplot(`/`autoplot(`. Base-R `hist(`/`boxplot(`/`barplot(`/`image(`/`contour(` were
+# DEFERRED — they fire on incidental diagnostic plots (false-positive risk); Stata `saving()` graph
+# option DEFERRED (ambiguous, appears in non-graph contexts).
+_GRAPH_CMD = re.compile(r'^\s*(?:[\w.$]+\s*(?:<-|<<-|=)\s*)?(graph\s+(?:twoway|bar|box|matrix|combine|tw)|twoway|histogram|scatter|kdensity|coefplot|marginsplot|ggplot|qplot|autoplot|plot\()', re.IGNORECASE)
 # A figure write-out: a graphics device open or an explicit graph-export verb. Single leading `\b`
 # (NOT per-token) is deliberate — a per-token `\b` would false-match `foo.png(`. `(` is escaped.
 # Kept a strict superset of the graphics-device subset of dependency_graph._WRITE_VERBS; the
@@ -98,8 +106,18 @@ _FILE_EXISTS_GUARD = re.compile(r'(confirm\s+file|file\.exists|os\.path\.exists|
 # The optional `(?:[-=]{1,2}>\s*)?` slot accepts the `-->`/`->`/`=>` anchor reproai itself recommends
 # (A12/D1/A2 target_form), while the 1-2 char arrow-body rejects long arrows (`---->`), bullets
 # (`# - Table`), and hrules (`# ----`). See test_table_header_matches_recommended_anchor.
-_TABLE_HEADER = re.compile(r'^\s*(?:\*+|//+|#+)\s*\**\s*(?:[-=]{1,2}>\s*)?\**\s*(Table|Tabla)\s+([A-Za-z]?\.?\d+)\b', re.IGNORECASE)
-_FIGURE_HEADER = re.compile(r'^\s*(?:\*+|//+|#+)\s*\**\s*(?:[-=]{1,2}>\s*)?\**\s*(Figure|Fig\.?|Figura)\s+([A-Za-z]?\.?\d+)\b', re.IGNORECASE)
+#
+# Follow-up B: the number group `_NUM_LABEL` captures the FULL label, not a truncated prefix.
+#   - `[A-Za-z]{0,3}[-.]?` — appendix/SI prefixes: `A.1`, `E1`, `S1`, `SI-3`, `B2a` (1-3 letters,
+#     optional `-`/`.` separator). 1-3 letters is deliberate: it admits `SI` but not whole words.
+#   - `\d+(?:[.\-]\d+)*` — multi-segment numbers: `1`, `1.2`, `1-2`, `1.2.3`. This FIXES the old
+#     `([A-Za-z]?\.?\d+)` silent partial-match where `Table 1.2` captured only `1`, MERGING
+#     sub-tables 1.1 and 1.2 into one `_section_spans` group. They are now DISTINCT spans.
+#   - `[a-z]?` — a trailing sub-table letter: `1a`, `B2a`.
+# Known limitation: Roman-numeral labels (`Table II`) are not captured (rare; documented, not fixed).
+_NUM_LABEL = r'([A-Za-z]{0,3}[-.]?\d+(?:[.\-]\d+)*[a-z]?)'
+_TABLE_HEADER = re.compile(r'^\s*(?:\*+|//+|#+)\s*\**\s*(?:[-=]{1,2}>\s*)?\**\s*(Table|Tabla)\s+' + _NUM_LABEL + r'\b', re.IGNORECASE)
+_FIGURE_HEADER = re.compile(r'^\s*(?:\*+|//+|#+)\s*\**\s*(?:[-=]{1,2}>\s*)?\**\s*(Figure|Fig\.?|Figura)\s+' + _NUM_LABEL + r'\b', re.IGNORECASE)
 
 # C8: stochastic operation with no seed (the generalization of C7, which owns the parallel %dopar%
 # case). A seed FIXES the realized draws, so this is output-changing, not lossless.
@@ -453,19 +471,25 @@ def _detect_relative_cd(path: str, text: str) -> list[dict[str, Any]]:
 
 
 def _detect_compat_signatures(path: str, text: str, has_version: bool) -> list[dict[str, Any]]:
+    # Follow-up C: every scanner here is comment-blind unless it reads the comment-stripped CODE
+    # portion. `_detect_compat_signatures` is only ever called on Stata (.do/.ado) — see the
+    # `if lang == "stata":` dispatch — so strip with lang="stata". A commented `tmpdir`
+    # (`* note: tmpdir` / `// tmpdir`) or any of the other commented signatures must stay silent,
+    # while real code still fires. Evidence snippets keep the ORIGINAL line.
     hits: list[dict[str, Any]] = []
     for i, line in enumerate(text.splitlines(), start=1):
-        if _REGHDFE_IV.search(line):
+        code = _strip_comment_keep_strings(line, "stata")
+        if _REGHDFE_IV.search(code):
             hits.append(_ev(path, i, f"reghdfe IV-syntax (use ivreghdfe or pin version): {line.strip()[:90]}"))
-        elif _RDROBUST_DEPR.search(line):
+        elif _RDROBUST_DEPR.search(code):
             hits.append(_ev(path, i, f"rdrobust deprecated bwselect(): {line.strip()[:90]}"))
-        elif _TABLE_C.match(line):
+        elif _TABLE_C.match(code):
             hits.append(_ev(path, i, f"`table var, c(...)` removed in Stata 17: {line.strip()[:90]}"))
-        elif _TMPDIR.search(line) and not has_version:
+        elif _TMPDIR.search(code) and not has_version:
             hits.append(_ev(path, i, f"tmpdir needs Stata 17+; declare version: {line.strip()[:90]}"))
-        elif _LEGACY_MIXED.match(line):
+        elif _LEGACY_MIXED.match(code):
             hits.append(_ev(path, i, f"legacy mixed-model command (hangs/removed on modern Stata; use me-prefix): {line.strip()[:90]}"))
-        elif _CD_EMPTY.match(line):
+        elif _CD_EMPTY.match(code):
             hits.append(_ev(path, i, "`cd \"\"` switches to HOME and breaks relative data paths"))
     return hits
 
@@ -702,10 +726,25 @@ def _has_toplevel_estimation(text: str) -> bool:
     return len(_toplevel_estimation_lines(text)) > 0
 
 
-# A table/figure export only counts for D1 if it writes under the canonical output dir — same rule
-# as `reproai gate`, so `reproai check` (D1) and the gate agree on what is "exported".
-_OUT_TABLE_PATH = re.compile(r'output[\\/]tables[\\/]', re.IGNORECASE)
-_OUT_FIGURE_PATH = re.compile(r'output[\\/]figures[\\/]', re.IGNORECASE)
+# A table/figure export only counts for D1 if it writes under a designated `tables/`/`figures/`
+# subfolder — same rule as `reproai gate`, so `reproai check` (D1) and the gate agree on what is
+# "exported". Keep this in lockstep with gate._OUT_TABLE/_OUT_FIGURE and the inline target-extractor
+# in gate._section_export_targets.
+#
+# Follow-up D (recommend≡detect): D1's `rule` advises "a designated relative output folder (e.g.
+# output/tables, output/figures)", but the detector hard-required the literal `output/` prefix, so
+# `results/tables/`, `tables/`, etc. failed. The optional `(?:[\w.\-]+[\\/])*` prefix now accepts any
+# (or no) leading path before the `tables/`/`figures/` segment, so `output/tables/`,
+# `results/tables/`, and bare `tables/` all satisfy the intent. The `tables/`/`figures/` SEGMENT is
+# still required, so the misnamed-export bypass (`esttab using "mytable.csv"`) is still rejected.
+#
+# Follow-up D fix: a left boundary `(?:^|[\\/])` is REQUIRED before the `tables/`/`figures/` segment.
+# Without it, `.search` matched `tables/` as a SUBSTRING of a longer directory name (`mytables/`,
+# `notes_tables/`, `vegetables/`, ...), wrongly clearing a "no canonical output folder" case (D1
+# false negative) and disagreeing with the gate's quote-anchored inline regex. The boundary forces
+# `tables`/`figures` to start at the path head or right after a separator.
+_OUT_TABLE_PATH = re.compile(r'(?:^|[\\/])(?:[\w.\-]+[\\/])*tables[\\/]', re.IGNORECASE)
+_OUT_FIGURE_PATH = re.compile(r'(?:^|[\\/])(?:[\w.\-]+[\\/])*figures[\\/]', re.IGNORECASE)
 
 
 def _has_canonical_export(body: list[str], cmd_re: re.Pattern[str], out_re: re.Pattern[str]) -> bool:

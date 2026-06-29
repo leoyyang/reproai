@@ -443,7 +443,7 @@ rules:
     category: structural
     kind: normalization
     priority: P2
-    rule: "Author should save each reported table's estimates and each figure to a designated relative output folder (e.g. output/tables, output/figures), so every paper artifact has a regenerating command and a known output location."
+    rule: "Author should save each reported table's estimates and each figure to a designated relative output subfolder — a path ending in tables/ for tables or figures/ for figures (e.g. output/tables/, results/tables/, or a bare tables/) — so every paper artifact has a regenerating command and a known output location."
     detection: "Estimation commands that build reported tables run with no table-export command (esttab/outreg2/estout/putexcel/putdocx, or R stargazer/texreg/write.csv of a model) writing to a relative output path; or graph/plot commands with no graph export to a relative figures folder. Reported as 'artifact-output coverage incomplete' — NOT as a named-table claim, since the linter does not read the paper PDF."
     languages: [stata, r]
     source_lessons: ["matcher: tables with no machine-readable export are hard to align downstream", "journalist: figures with no saved file cannot be eyeballed against the paper"]
