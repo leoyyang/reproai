@@ -22,10 +22,21 @@ from .rule_engine import (
     _toplevel_estimation_lines, _toplevel_graph_line,
 )
 
-# A VALID export must write under the canonical output dir for its kind. This is what stops the
-# "inject a misnamed esttab to silence the finding" bypass: the path must be output/tables(figures).
-_OUT_TABLE = re.compile(r'output[\\/]tables[\\/]', re.IGNORECASE)
-_OUT_FIGURE = re.compile(r'output[\\/]figures[\\/]', re.IGNORECASE)
+# A VALID export must write under a designated `tables/`/`figures/` subfolder. Requiring that SEGMENT
+# (not a bare filename) is what stops the "inject a misnamed esttab to silence the finding" bypass:
+# `esttab using "mytable.csv"` has no `tables/` segment and still does not count.
+#
+# Follow-up D (recommend≡detect): broadened from the literal `output/tables(figures)/` to an optional
+# leading path prefix `(?:[\w.\-]+[\\/])*`, matching rule_engine._OUT_TABLE_PATH/_OUT_FIGURE_PATH and
+# the inline target-extractor in _section_export_targets below — so `output/tables/`,
+# `results/tables/`, and bare `tables/` all satisfy D1 and the gate identically.
+#
+# Follow-up D fix: a left boundary `(?:^|[\\/])` prevents `.search` matching `tables/` as a SUBSTRING
+# of a longer dir name (`mytables/`, `notes_tables/`, `vegetables/`, ...). The inline regex in
+# _section_export_targets below is already quote-anchored (`["\']` before the path), so it is correct
+# as-is and intentionally NOT changed; these two constants needed the boundary to match it.
+_OUT_TABLE = re.compile(r'(?:^|[\\/])(?:[\w.\-]+[\\/])*tables[\\/]', re.IGNORECASE)
+_OUT_FIGURE = re.compile(r'(?:^|[\\/])(?:[\w.\-]+[\\/])*figures[\\/]', re.IGNORECASE)
 
 
 @dataclass
@@ -44,7 +55,10 @@ def _section_export_targets(body: list[str], out_re: re.Pattern[str], cmd_re: re
         masked = _mask_r_strings_comments(ln)
         if not cmd_re.search(masked):
             continue
-        for m in re.finditer(r'["\']([^"\']*output[\\/](?:tables|figures)[\\/][^"\']+)["\']', ln, re.IGNORECASE):
+        # Follow-up D: broadened in lockstep with _OUT_TABLE/_OUT_FIGURE — an optional leading path
+        # prefix before the required `tables/`/`figures/` segment, so `results/tables/x.csv` and bare
+        # `tables/x.csv` count, while a bare filename (`mytable.csv`, no segment) still does not.
+        for m in re.finditer(r'["\']((?:[\w.\-]+[\\/])*(?:tables|figures)[\\/][^"\']+)["\']', ln, re.IGNORECASE):
             targets.append(m.group(1).replace("\\", "/"))
     return targets
 

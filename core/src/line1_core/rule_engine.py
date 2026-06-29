@@ -78,14 +78,46 @@ _PROGRAM_DEF = re.compile(r'^\s*program\s+(?:define\s+)?(\w+)', re.IGNORECASE)
 
 # D1 artifact-output coverage
 _TABLE_EXPORT = re.compile(r'\b(esttab|estout|outreg2?|putexcel|putdocx|tabout|stargazer|texreg|htmlreg|etable|modelsummary|write[._]csv|write[._]dta|saveRDS|export\s+delimited)\b', re.IGNORECASE)
-_GRAPH_CMD = re.compile(r'^\s*(graph\s+(?:twoway|bar|box|matrix|combine|tw)|twoway|histogram|scatter|kdensity|coefplot|marginsplot|ggplot|plot\()', re.IGNORECASE)
-_GRAPH_EXPORT = re.compile(r'\b(graph\s+export|graph\s+save|ggsave|gr\s+export|dev\.copy|pdf\(|png\(|postscript\()', re.IGNORECASE)
+# Follow-up A: a figure producer may be ASSIGNED (`p <- ggplot(...)`, `g = qplot(...)`), which the
+# old `^\s*`-anchored pattern missed entirely. The optional assignment prefix
+# `(?:[\w.$]+\s*(?:<-|<<-|=)\s*)?` admits `name <-`/`name <<-`/`name =` before the producer while the
+# trailing producer alternation still gates (so `x <- mean(y)` does NOT match). Widening this makes
+# D1/gate STRICTER (an assigned plot now expects an export), so only HIGH-CONFIDENCE producers were
+# added: R `qplot(`/`autoplot(`. Base-R `hist(`/`boxplot(`/`barplot(`/`image(`/`contour(` were
+# DEFERRED — they fire on incidental diagnostic plots (false-positive risk); Stata `saving()` graph
+# option DEFERRED (ambiguous, appears in non-graph contexts).
+_GRAPH_CMD = re.compile(r'^\s*(?:[\w.$]+\s*(?:<-|<<-|=)\s*)?(graph\s+(?:twoway|bar|box|matrix|combine|tw)|twoway|histogram|scatter|kdensity|coefplot|marginsplot|ggplot|qplot|autoplot|plot\()', re.IGNORECASE)
+# A figure write-out: a graphics device open or an explicit graph-export verb. Single leading `\b`
+# (NOT per-token) is deliberate — a per-token `\b` would false-match `foo.png(`. `(` is escaped.
+# Kept a strict superset of the graphics-device subset of dependency_graph._WRITE_VERBS; the
+# drift-guard test (test_graph_export_covers_dependency_graph_devices) fails CI if that ever breaks.
+_GRAPH_EXPORT = re.compile(
+    r'\b(graph\s+export|graph\s+save|ggsave|gr\s+export|dev\.copy|'
+    r'pdf\(|png\(|jpe?g\(|tiff\(|bmp\(|svg\(|svglite\(|'
+    r'cairo_pdf\(|cairo_ps\(|bitmap\(|'
+    r'agg_png\(|agg_jpe?g\(|agg_tiff\(|'
+    r'Cairo\(|CairoPNG\(|CairoPDF\(|CairoJPEG\(|CairoTIFF\(|'
+    r'tikz\(|postscript\(|savefig\()',
+    re.IGNORECASE)
 # D3 intermediate data write / read
 _DATA_WRITE = re.compile(r'^\s*(?:cap(?:ture)?\s+|qui(?:etly)?\s+)*(save|saveold|export\s+delimited|outsheet|saveRDS|write[._]csv|write[._]dta|write[._]rds|haven::write_dta|saveRDS)\b[^\r\n]*?["\']?([\w./\\-]+\.(?:dta|csv|rds|rdata|tab|parquet))["\']?', re.IGNORECASE)
 _FILE_EXISTS_GUARD = re.compile(r'(confirm\s+file|file\.exists|os\.path\.exists|assert\s+_rc|fileexists)', re.IGNORECASE)
-# D1 table/figure section headers in comments (e.g. "* Table 3: ..." / "# Figure 2")
-_TABLE_HEADER = re.compile(r'^\s*(?:\*+|//+|#+)\s*\**\s*(Table|Tabla)\s+([A-Za-z]?\.?\d+)\b', re.IGNORECASE)
-_FIGURE_HEADER = re.compile(r'^\s*(?:\*+|//+|#+)\s*\**\s*(Figure|Fig\.?|Figura)\s+([A-Za-z]?\.?\d+)\b', re.IGNORECASE)
+# D1 table/figure section headers in comments (e.g. "* Table 3: ..." / "# Figure 2" / "# --> Table 1").
+# The optional `(?:[-=]{1,2}>\s*)?` slot accepts the `-->`/`->`/`=>` anchor reproai itself recommends
+# (A12/D1/A2 target_form), while the 1-2 char arrow-body rejects long arrows (`---->`), bullets
+# (`# - Table`), and hrules (`# ----`). See test_table_header_matches_recommended_anchor.
+#
+# Follow-up B: the number group `_NUM_LABEL` captures the FULL label, not a truncated prefix.
+#   - `[A-Za-z]{0,3}[-.]?` — appendix/SI prefixes: `A.1`, `E1`, `S1`, `SI-3`, `B2a` (1-3 letters,
+#     optional `-`/`.` separator). 1-3 letters is deliberate: it admits `SI` but not whole words.
+#   - `\d+(?:[.\-]\d+)*` — multi-segment numbers: `1`, `1.2`, `1-2`, `1.2.3`. This FIXES the old
+#     `([A-Za-z]?\.?\d+)` silent partial-match where `Table 1.2` captured only `1`, MERGING
+#     sub-tables 1.1 and 1.2 into one `_section_spans` group. They are now DISTINCT spans.
+#   - `[a-z]?` — a trailing sub-table letter: `1a`, `B2a`.
+# Known limitation: Roman-numeral labels (`Table II`) are not captured (rare; documented, not fixed).
+_NUM_LABEL = r'([A-Za-z]{0,3}[-.]?\d+(?:[.\-]\d+)*[a-z]?)'
+_TABLE_HEADER = re.compile(r'^\s*(?:\*+|//+|#+)\s*\**\s*(?:[-=]{1,2}>\s*)?\**\s*(Table|Tabla)\s+' + _NUM_LABEL + r'\b', re.IGNORECASE)
+_FIGURE_HEADER = re.compile(r'^\s*(?:\*+|//+|#+)\s*\**\s*(?:[-=]{1,2}>\s*)?\**\s*(Figure|Fig\.?|Figura)\s+' + _NUM_LABEL + r'\b', re.IGNORECASE)
 
 # C8: stochastic operation with no seed (the generalization of C7, which owns the parallel %dopar%
 # case). A seed FIXES the realized draws, so this is output-changing, not lossless.
@@ -168,10 +200,122 @@ def _lang_of(entries: list[FileEntry], path: str) -> str:
     return "other"
 
 
-def _line_hits(text: str, regex: re.Pattern[str]) -> list[tuple[int, str]]:
+# --- Comment-aware line scanning (FIX: B4 and the line-by-line detector class false-firing in comments) -
+# The defective callers below scan for CODE patterns (abs paths, time-series ops, wildcards, GitHub
+# installs, ...). A path/pattern left inside a `#`/`*`/`//` comment — including by reproai's OWN /fix
+# output (`# was: setwd("/Users/...")`) — must NOT fire. The hard constraint: we must strip the
+# COMMENT while PRESERVING string literals, because _ABS_PATH reads a path *inside a quoted string*
+# (`setwd("/abs")`). Blanking string contents (the rejected _mask_r_strings_comments approach) would
+# make B4 catch nothing on its real case. Technique: mask only string *contents* in a throwaway copy
+# to locate the first UNQUOTED comment marker, then slice the ORIGINAL line there so strings survive.
+_STR_SPAN = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'')
+
+
+def _mask_string_contents(line: str, lang: str = "r") -> str:
+    """Replace the *contents* of every complete string literal with same-length filler (keeping the
+    delimiters and length), so comment markers inside strings are hidden but column indices are
+    unchanged. An unterminated string masks to end-of-line (a `#`/`//` after an open quote is still
+    inside it).
+
+    Language-aware string syntax:
+    - R / Python: both `"..."` and `'...'` are strings.
+    - Stata: ONLY `"..."` and the compound `` `"..."' `` form are strings. A bare `'` is macro-close
+      syntax (`` `macro' ``), NOT a string delimiter, so it must NOT open a masked span — otherwise an
+      odd number of macro apostrophes before an inline `//` masks the comment marker away."""
+    if lang == "stata":
+        return _mask_string_contents_stata(line)
+    out: list[str] = []
+    i, n = 0, len(line)
+    while i < n:
+        ch = line[i]
+        if ch in '"\'':
+            m = _STR_SPAN.match(line, i)
+            if m:
+                out.append(ch + ("x" * (m.end() - i - 2)) + ch)
+                i = m.end()
+                continue
+            # unterminated literal: mask the rest of the line as string interior
+            out.append(ch + ("x" * (n - i - 1)))
+            break
+        out.append(ch)
+        i += 1
+    return "".join(out)
+
+
+def _mask_string_contents_stata(line: str) -> str:
+    """Stata variant of _mask_string_contents. Strings are `"..."` and compound `` `"..."' ``; a bare
+    `'` is a macro close, never a string delimiter, so it is emitted verbatim (leaving any following
+    `//` comment marker visible)."""
+    out: list[str] = []
+    i, n = 0, len(line)
+    while i < n:
+        # compound double-quote string: `" ... "'
+        if line.startswith('`"', i):
+            close = line.find('"\'', i + 2)
+            if close == -1:  # unterminated -> mask to EOL
+                out.append('`"' + ("x" * (n - i - 2)))
+                break
+            out.append('`"' + ("x" * (close - (i + 2))) + '"\'')
+            i = close + 2
+            continue
+        ch = line[i]
+        if ch == '"':  # simple double-quote string
+            close = line.find('"', i + 1)
+            if close == -1:  # unterminated -> mask to EOL
+                out.append('"' + ("x" * (n - i - 1)))
+                break
+            out.append('"' + ("x" * (close - i - 1)) + '"')
+            i = close + 1
+            continue
+        out.append(ch)  # backtick, apostrophe, and everything else: literal (NOT a string)
+        i += 1
+    return "".join(out)
+
+
+def _strip_comment_keep_strings(line: str, lang: str) -> str:
+    """Return the CODE portion of one physical line: comment removed, string literals intact.
+
+    R / Python: `#` (only when unquoted).
+    Stata (.do/.ado): a line-leading `*` (whole line is a comment), an inline `//` (unquoted), and a
+    single-line `/* ... */` (the spanned region). Multi-line `/* */` blocks across physical lines are
+    a noted limitation — left intact.
+    Unknown languages: returned unchanged (no false-negative risk for non-script file types)."""
+    masked = _mask_string_contents(line, lang)
+    if lang == "stata":
+        # whole-line comment: first non-whitespace char is `*`
+        stripped = masked.lstrip()
+        if stripped.startswith("*"):
+            return line[: len(line) - len(stripped)]  # keep leading whitespace only
+        # single-line /* ... */ (remove every same-line balanced span; ignore unterminated openers)
+        while True:
+            open_i = masked.find("/*")
+            if open_i == -1:
+                break
+            close_i = masked.find("*/", open_i + 2)
+            if close_i == -1:
+                break  # opener with no same-line closer -> multi-line; leave as-is (noted limitation)
+            line = line[:open_i] + " " * (close_i + 2 - open_i) + line[close_i + 2 :]
+            masked = masked[:open_i] + " " * (close_i + 2 - open_i) + masked[close_i + 2 :]
+        # inline // comment (unquoted)
+        slash = masked.find("//")
+        if slash != -1:
+            return line[:slash]
+        return line
+    if lang in {"r", "python"}:
+        hash_i = masked.find("#")
+        if hash_i != -1:
+            return line[:hash_i]
+        return line
+    return line
+
+
+def _code_line_hits(text: str, regex: re.Pattern[str], lang: str) -> list[tuple[int, str]]:
+    """Per-line regex scan that matches `regex` against the comment-stripped CODE portion of each line
+    (string literals preserved) while RETURNING the original line and its real 1-based line number,
+    so evidence still shows the true source line."""
     hits = []
     for i, line in enumerate(text.splitlines(), start=1):
-        if regex.search(line):
+        if regex.search(_strip_comment_keep_strings(line, lang)):
             hits.append((i, line))
     return hits
 
@@ -327,19 +471,25 @@ def _detect_relative_cd(path: str, text: str) -> list[dict[str, Any]]:
 
 
 def _detect_compat_signatures(path: str, text: str, has_version: bool) -> list[dict[str, Any]]:
+    # Follow-up C: every scanner here is comment-blind unless it reads the comment-stripped CODE
+    # portion. `_detect_compat_signatures` is only ever called on Stata (.do/.ado) — see the
+    # `if lang == "stata":` dispatch — so strip with lang="stata". A commented `tmpdir`
+    # (`* note: tmpdir` / `// tmpdir`) or any of the other commented signatures must stay silent,
+    # while real code still fires. Evidence snippets keep the ORIGINAL line.
     hits: list[dict[str, Any]] = []
     for i, line in enumerate(text.splitlines(), start=1):
-        if _REGHDFE_IV.search(line):
+        code = _strip_comment_keep_strings(line, "stata")
+        if _REGHDFE_IV.search(code):
             hits.append(_ev(path, i, f"reghdfe IV-syntax (use ivreghdfe or pin version): {line.strip()[:90]}"))
-        elif _RDROBUST_DEPR.search(line):
+        elif _RDROBUST_DEPR.search(code):
             hits.append(_ev(path, i, f"rdrobust deprecated bwselect(): {line.strip()[:90]}"))
-        elif _TABLE_C.match(line):
+        elif _TABLE_C.match(code):
             hits.append(_ev(path, i, f"`table var, c(...)` removed in Stata 17: {line.strip()[:90]}"))
-        elif _TMPDIR.search(line) and not has_version:
+        elif _TMPDIR.search(code) and not has_version:
             hits.append(_ev(path, i, f"tmpdir needs Stata 17+; declare version: {line.strip()[:90]}"))
-        elif _LEGACY_MIXED.match(line):
+        elif _LEGACY_MIXED.match(code):
             hits.append(_ev(path, i, f"legacy mixed-model command (hangs/removed on modern Stata; use me-prefix): {line.strip()[:90]}"))
-        elif _CD_EMPTY.match(line):
+        elif _CD_EMPTY.match(code):
             hits.append(_ev(path, i, "`cd \"\"` switches to HOME and breaks relative data paths"))
     return hits
 
@@ -576,10 +726,25 @@ def _has_toplevel_estimation(text: str) -> bool:
     return len(_toplevel_estimation_lines(text)) > 0
 
 
-# A table/figure export only counts for D1 if it writes under the canonical output dir — same rule
-# as `reproai gate`, so `reproai check` (D1) and the gate agree on what is "exported".
-_OUT_TABLE_PATH = re.compile(r'output[\\/]tables[\\/]', re.IGNORECASE)
-_OUT_FIGURE_PATH = re.compile(r'output[\\/]figures[\\/]', re.IGNORECASE)
+# A table/figure export only counts for D1 if it writes under a designated `tables/`/`figures/`
+# subfolder — same rule as `reproai gate`, so `reproai check` (D1) and the gate agree on what is
+# "exported". Keep this in lockstep with gate._OUT_TABLE/_OUT_FIGURE and the inline target-extractor
+# in gate._section_export_targets.
+#
+# Follow-up D (recommend≡detect): D1's `rule` advises "a designated relative output folder (e.g.
+# output/tables, output/figures)", but the detector hard-required the literal `output/` prefix, so
+# `results/tables/`, `tables/`, etc. failed. The optional `(?:[\w.\-]+[\\/])*` prefix now accepts any
+# (or no) leading path before the `tables/`/`figures/` segment, so `output/tables/`,
+# `results/tables/`, and bare `tables/` all satisfy the intent. The `tables/`/`figures/` SEGMENT is
+# still required, so the misnamed-export bypass (`esttab using "mytable.csv"`) is still rejected.
+#
+# Follow-up D fix: a left boundary `(?:^|[\\/])` is REQUIRED before the `tables/`/`figures/` segment.
+# Without it, `.search` matched `tables/` as a SUBSTRING of a longer directory name (`mytables/`,
+# `notes_tables/`, `vegetables/`, ...), wrongly clearing a "no canonical output folder" case (D1
+# false negative) and disagreeing with the gate's quote-anchored inline regex. The boundary forces
+# `tables`/`figures` to start at the path head or right after a separator.
+_OUT_TABLE_PATH = re.compile(r'(?:^|[\\/])(?:[\w.\-]+[\\/])*tables[\\/]', re.IGNORECASE)
+_OUT_FIGURE_PATH = re.compile(r'(?:^|[\\/])(?:[\w.\-]+[\\/])*figures[\\/]', re.IGNORECASE)
 
 
 def _has_canonical_export(body: list[str], cmd_re: re.Pattern[str], out_re: re.Pattern[str]) -> bool:
@@ -943,7 +1108,7 @@ def run(root: Path, entries: list[FileEntry], edges: list[Edge], table_exports) 
     for path, text in texts.items():
         lang = _lang_of(entries, path)
 
-        for line_no, line in _line_hits(text, _ABS_PATH):
+        for line_no, line in _code_line_hits(text, _ABS_PATH, lang):
             emit("B4-no-abs-paths", [_ev(path, line_no, line)], "Absolute path literal found.")
 
         if lang in {"stata", "r"}:
@@ -959,15 +1124,16 @@ def run(root: Path, entries: list[FileEntry], edges: list[Edge], table_exports) 
         if lang in {"stata", "r"}:
             loop_depth = 0
             for line_no, line in enumerate(text.splitlines(), start=1):
-                if _LOOP_HEAD.search(line):
+                code = _strip_comment_keep_strings(line, lang)
+                if _LOOP_HEAD.search(code):
                     loop_depth += 1
-                if loop_depth > 0 and _EXPORT_FIXED.search(line):
+                if loop_depth > 0 and _EXPORT_FIXED.search(code):
                     emit("B1-minimize-loops", [_ev(path, line_no, line)],
                          "Fixed-filename table export inside a loop overwrites per iteration.")
-                if loop_depth > 0 and _is_estimation(line):
+                if loop_depth > 0 and _is_estimation(code):
                     emit("N2-explicit-table-commands", [_ev(path, line_no, line)],
                          "Estimation inside a loop hides the model->table-cell mapping from the pipeline.")
-                if re.match(r'^\s*\}', line) and loop_depth > 0:
+                if re.match(r'^\s*\}', code) and loop_depth > 0:
                     loop_depth -= 1
 
         if lang == "stata":
@@ -975,15 +1141,15 @@ def run(root: Path, entries: list[FileEntry], edges: list[Edge], table_exports) 
                 if not _upstream_loads_data(path, edges, texts, _DATA_LOAD_STATA):
                     emit("A3-data-load", [_ev(path)],
                          "Estimation present but no use/import in this script, and no upstream script loads data first.")
-            ts_hits = _line_hits(text, _TS_OP)
+            ts_hits = _code_line_hits(text, _TS_OP, lang)
             if ts_hits and not _TSSET.search(text):
                 emit("A4-panel-declare", [_ev(path, ts_hits[0][0], ts_hits[0][1])],
                      "Time-series operators without a prior tsset/xtset.")
-            for line_no, line in _line_hits(text, _CLEAR_ALL):
+            for line_no, line in _code_line_hits(text, _CLEAR_ALL, lang):
                 if path not in callers:
                     emit("B7-no-cross-script-clearall", [_ev(path, line_no, line)],
                          "clear all in a non-master script drops programs later scripts need.")
-            for line_no, line in _line_hits(text, _WIDE_WILDCARD):
+            for line_no, line in _code_line_hits(text, _WIDE_WILDCARD, lang):
                 emit("B3-no-wide-wildcard", [_ev(path, line_no, line)],
                      "Wildcard varlist may expand past 20 columns.")
             if _VERSION_SENSITIVE.search(text) and not _VERSION_STMT.search(text):
@@ -1001,7 +1167,7 @@ def run(root: Path, entries: list[FileEntry], edges: list[Edge], table_exports) 
                  "Version-fragile command syntax without a declared version.")
             emit("B10-embedded-foreign-code", _detect_embedded_foreign(path, text),
                  "Non-Stata (R-style) code in a .do file halts Stata before regressions.")
-            for line_no, line in _line_hits(text, _QUIET_LOAD):
+            for line_no, line in _code_line_hits(text, _QUIET_LOAD, lang):
                 emit("B9-suppressed-data-load", [_ev(path, line_no, line)],
                      "quietly around use/import hides a missing-file failure.")
             emit("N1-no-delimit-semicolon", _detect_delimit(path, text),
@@ -1020,7 +1186,7 @@ def run(root: Path, entries: list[FileEntry], edges: list[Edge], table_exports) 
                 if not _upstream_loads_data(path, edges, texts, _DATA_LOAD_R):
                     emit("A3-data-load", [_ev(path)],
                          "Estimation present but no read/load in this script, and no upstream script loads data first.")
-            for line_no, line in _line_hits(text, _GITHUB_INSTALL):
+            for line_no, line in _code_line_hits(text, _GITHUB_INSTALL, lang):
                 emit("C1-pin-deps", [_ev(path, line_no, line)], "Unpinned direct-from-source install.")
             emit("C5-deprecated-r-packages", _detect_deprecated_r_pkg(path, text),
                  "Removed/deprecated R package loaded at top halts the whole script.")
