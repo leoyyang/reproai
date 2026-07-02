@@ -61,6 +61,9 @@ Detector fixes:
 Tests: `core/tests/test_issue_batch_2026_07.py` (30 cases) pins each fix and its anti-bypass /
 no-false-negative boundary. Full suite: 197 passed.
 
+Thanks: @aeshaansinghal reported all nine issues; @molloyzak13 independently submitted an identical
+fix for the `screenreg` gap (#21, PR #25, superseded by this batch).
+
 ## plugin 0.4.7: fix invalid Claude plugin manifest (2026-06-23)
 
 - Removed unrecognized keys `$schema` and `displayName` from `claude-plugin/.claude-plugin/plugin.json`.

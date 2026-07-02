@@ -67,6 +67,10 @@ export const changelog = {
           tag: "Improved",
           text: "Qualitative and document-only deposits (interviews, primary sources, no code) no longer receive code-only checklist items they could never complete; README, data-citation, and license checks still apply.",
         },
+        {
+          tag: "Thanks",
+          text: "Thanks to `@aeshaansinghal`, who reported the issues fixed in this release, and `@molloyzak13`, who independently sent a fix for the `screenreg` export gap. Spotted something reproai gets wrong? `/reproai:contribute` turns it into a ready-to-file issue.",
+        },
       ],
     },
     {
