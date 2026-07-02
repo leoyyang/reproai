@@ -7,7 +7,7 @@ rules in over time (improve-with-use).
 
 Versioning: `rules_version` is date-based `YYYY.MM.DD` (bump when a rule is added/changed/promoted).
 
-## rules_version 2026.07.02: no-code deposits, LLM-data provenance, texreg family, detector-consistency
+## plugin 0.4.8 / rules_version 2026.07.02: no-code deposits, LLM-data provenance, texreg family, detector-consistency
 
 Batch fixing GitHub issues #8, #9, #10, #19, #20, #21, #22, #23, #24 (reported by an external user
 running `reproai check` on R/Stata and GUI-only packages). New rules + detector fixes; no engine API
