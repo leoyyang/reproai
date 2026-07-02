@@ -31,6 +31,37 @@ export const changelog = {
 
   releases: [
     {
+      version: "0.4.8",
+      date: "July 1, 2026",
+      title: "Handles GUI-only and qualitative deposits, and stops a few false alarms on R packages.",
+      changes: [
+        {
+          tag: "New",
+          text: "A package that ships data but no runnable code (for example a SmartPLS, SPSS, or JASP point-and-click analysis) is now flagged clearly, instead of passing with zero issues as if it were fine. reproai tells you to add the script that produces your results, or document the exact steps to reproduce each table and figure.",
+        },
+        {
+          tag: "New",
+          text: "If a package has no runnable code and also ships no result tables or figures, reproai points out that a reproduction has nothing to compare against.",
+        },
+        {
+          tag: "Fixed",
+          text: "A LaTeX label such as `\\tau_{1|2}` in a regression table's coefficient names is no longer mistaken for an absolute file path, so it no longer fails the no-absolute-paths check at submission.",
+        },
+        {
+          tag: "Fixed",
+          text: "Table exports written across several lines (with `file =` on its own line) and `screenreg` outputs are now recognized, so a package that already saves its tables passes without you having to reformat the call.",
+        },
+        {
+          tag: "Improved",
+          text: "A run-all script with a non-standard name (for example `meta.R`) is now recognized as your master script, matching what the package map already shows.",
+        },
+        {
+          tag: "Improved",
+          text: "Qualitative and document-only deposits (interviews, primary sources, no code) no longer receive code-only checklist items they could never complete; README, data-citation, and license checks still apply.",
+        },
+      ],
+    },
+    {
       version: "0.4.7",
       date: "June 27, 2026",
       title: "Maps your exhibits to your code, and catches missing inputs and unseeded draws.",

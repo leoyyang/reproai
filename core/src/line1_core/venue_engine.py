@@ -8,7 +8,8 @@ from pathlib import Path
 
 import yaml
 
-from .inventory import FileEntry
+from .inventory import FileEntry, _UNC_ABS, code_entries
+from .dependency_graph import Edge, entry_points as _entry_points, build as _build_edges
 
 _VENUE_DIR = Path(__file__).parent / "venues"
 
@@ -18,7 +19,9 @@ _README_SECTION_HINTS = [
     "instructions",
     "data source",
 ]
-_ABS_PATH = re.compile(r'(?:[A-Za-z]:\\|\\\\|/Users/|/home/|~/)')
+# UNC branch shares _UNC_ABS with rule_engine (issue #19): a bare `\\` matched LaTeX macros and
+# regex-escape literals in string args; requiring host+separator flags only real UNC paths.
+_ABS_PATH = re.compile(r'(?:[A-Za-z]:\\|' + _UNC_ABS + r'|/Users/|/home/|~/)')
 
 # the closed set of venue-check detectors the engine knows how to run; the contribute-time
 # validator rejects a profile that names any detector outside this set (run() itself stays lenient).
@@ -95,14 +98,13 @@ def _pdftotext(path: Path) -> str | None:
     return proc.stdout if proc.returncode == 0 else None
 
 
-def _has_master(entries: list[FileEntry]) -> bool:
-    for e in entries:
-        name = Path(e.path).name.lower()
-        if e.language in {"stata", "r", "python"} and any(
-            t in name for t in ("master", "main", "run_all", "runall")
-        ):
-            return True
-    return False
+def _has_master(entries: list[FileEntry], edges: list[Edge]) -> list[dict[str, Any]]:
+    """Structural master detection (issue #23): an entry point is a script that runs other scripts and
+    is run by none (or, with no include edges at all, one whose name marks it a runner). Delegates to
+    dependency_graph.entry_points so this venue check and the architecture report cannot disagree about
+    the same file, and so a non-conventionally-named run-all (e.g. meta.R) is recognised. Returns the
+    entry-point records (empty list if none)."""
+    return _entry_points(entries, edges)
 
 
 def _file_count(entries: list[FileEntry]) -> int:
@@ -220,14 +222,25 @@ def _seeded_rng(root: Path, entries: list[FileEntry]) -> tuple[str, str, list[st
     return "pass", "No non-reproducible parallel RNG pattern detected.", []
 
 
-def run(root: Path, entries: list[FileEntry], venue: str) -> tuple[dict[str, Any], list[Check]]:
-    return run_profile(root, entries, load_profile(venue))
+def run(root: Path, entries: list[FileEntry], venue: str, edges: list[Edge] | None = None) -> tuple[dict[str, Any], list[Check]]:
+    return run_profile(root, entries, load_profile(venue), edges)
 
 
-def run_profile(root: Path, entries: list[FileEntry], profile: dict[str, Any]) -> tuple[dict[str, Any], list[Check]]:
+# Code-presuming detectors: each verifies a property of executable code. On a deposit with no code
+# (a qualitative/document-only corpus) they can never be satisfied, so emitting them as author actions
+# is noise that dilutes the checks that DO apply (README, data citation, license). Issue #24.
+_CODE_PRESUMING_DETECTORS = frozenset({
+    "has_master_script", "env_declared", "rederive_from_raw", "no_absolute_paths", "seeded_rng",
+})
+
+
+def run_profile(root: Path, entries: list[FileEntry], profile: dict[str, Any], edges: list[Edge] | None = None) -> tuple[dict[str, Any], list[Check]]:
     """Run a profile that is already loaded — lets the contribute validator dry-run a DRAFT profile
     that is not installed in venues/ yet."""
     root = root.resolve()
+    if edges is None:
+        edges = _build_edges(root, entries)
+    has_code = bool(code_entries(entries))
     checks: list[Check] = []
 
     def add(spec: dict[str, Any], status: str, detail: str, evidence: list[str]) -> None:
@@ -249,6 +262,10 @@ def run_profile(root: Path, entries: list[FileEntry], profile: dict[str, Any]) -
 
     for spec in profile.get("checks", []):
         detector = spec.get("detector")
+        if detector in _CODE_PRESUMING_DETECTORS and not has_code:
+            add(spec, "not_applicable",
+                "Deposit contains no executable code; this code-level check does not apply.", [])
+            continue
         if detector == "readme_pdf_at_root":
             readme = _root_readme(root)
             add(spec, "pass" if readme else "fail",
@@ -292,9 +309,13 @@ def run_profile(root: Path, entries: list[FileEntry], profile: dict[str, Any]) -
             else:
                 add(spec, "fail", "No README found to check sections.", [])
         elif detector == "has_master_script":
-            ok = _has_master(entries)
-            add(spec, "pass" if ok else "needs_author_action",
-                "Master script detected." if ok else "No master/run-all script found.", [])
+            eps = _has_master(entries, edges)
+            if eps:
+                paths = [p["path"] for p in eps]
+                add(spec, "pass", f"Master/entry script detected: {', '.join(paths)}.", paths)
+            else:
+                add(spec, "needs_author_action",
+                    "No master/run-all script found (no script runs the others).", [])
         elif detector == "env_declared":
             ok = _env_declared(root, entries)
             add(spec, "pass" if ok else "needs_author_action",
@@ -347,6 +368,7 @@ def run_profile(root: Path, entries: list[FileEntry], profile: dict[str, Any]) -
         "fail": sum(1 for c in checks if c.status == "fail"),
         "needs_author_action": sum(1 for c in checks if c.status == "needs_author_action"),
         "not_implemented": sum(1 for c in checks if c.status == "not_implemented"),
+        "not_applicable": sum(1 for c in checks if c.status == "not_applicable"),
     }
     meta = {
         "venue": profile["venue"],

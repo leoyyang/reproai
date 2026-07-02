@@ -28,6 +28,14 @@ _LANG_BY_SUFFIX = {
 
 _SKIP_DIRS = {".git", ".github", "__pycache__", ".ipynb_checkpoints", "renv", ".Rproj.user"}
 
+# Shared UNC absolute-path sub-pattern. A real UNC path is \\host\share\...: two backslashes, a
+# hostname, then a path separator. The hostname class starts with [\w] (letter/digit/underscore) so
+# an IP host like \\192.168.1.5\share still matches; requiring the trailing separator excludes LaTeX
+# macros in R string literals ("\\tau", "\\alpha") and regex-escape literals (gsub("\\|")), which are
+# two backslashes + a token with NO separator (issue #19). Imported by rule_engine._ABS_PATH and
+# venue_engine._ABS_PATH so the two absolute-path detectors cannot drift on the UNC branch.
+_UNC_ABS = r'\\\\[\w][\w.-]*[\\/]'
+
 
 @dataclass(frozen=True)
 class FileEntry:

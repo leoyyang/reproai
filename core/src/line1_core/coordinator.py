@@ -24,7 +24,7 @@ def check(root: Path, venue: str | None) -> dict[str, Any]:
     venue_block = None
     checks: list[venue_engine.Check] = []
     if venue:
-        meta, checks = venue_engine.run(root, entries, venue)
+        meta, checks = venue_engine.run(root, entries, venue, edges)
         venue_block = reports.venue_compliance_report(root, meta, checks)
 
     risk = reports.risk_register(root, advisory, checks)
