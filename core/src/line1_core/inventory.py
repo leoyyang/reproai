@@ -28,6 +28,14 @@ _LANG_BY_SUFFIX = {
 
 _SKIP_DIRS = {".git", ".github", "__pycache__", ".ipynb_checkpoints", "renv", ".Rproj.user"}
 
+# Shared UNC absolute-path sub-pattern. A real UNC path is \\host\share\...: two backslashes, a
+# hostname, then a path separator. The hostname class starts with [\w] (letter/digit/underscore) so
+# an IP host like \\192.168.1.5\share still matches; requiring the trailing separator excludes LaTeX
+# macros in R string literals ("\\tau", "\\alpha") and regex-escape literals (gsub("\\|")), which are
+# two backslashes + a token with NO separator (issue #19). Imported by rule_engine._ABS_PATH and
+# venue_engine._ABS_PATH so the two absolute-path detectors cannot drift on the UNC branch.
+_UNC_ABS = r'\\\\[\w][\w.-]*[\\/]'
+
 
 @dataclass(frozen=True)
 class FileEntry:
@@ -73,3 +81,21 @@ def scan(root: Path) -> list[FileEntry]:
 
 def code_entries(entries: list[FileEntry]) -> list[FileEntry]:
     return [e for e in entries if e.language in {"stata", "r", "python"}]
+
+
+def _pdftotext(path: Path) -> str | None:
+    """Extract text from a PDF via poppler's `pdftotext`, when available. Reading a document is not
+    executing author code. Returns None on any failure (no poppler, extraction error) so the caller
+    falls back gracefully — no hard dependency is introduced. Shared by venue_engine (README section
+    checks) and rule_engine (reading a PDF README for LLM-provenance signals, issue #9)."""
+    import shutil
+    import subprocess
+
+    exe = shutil.which("pdftotext")
+    if exe is None:
+        return None
+    try:
+        proc = subprocess.run([exe, "-q", str(path), "-"], capture_output=True, text=True, timeout=20)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return proc.stdout if proc.returncode == 0 else None

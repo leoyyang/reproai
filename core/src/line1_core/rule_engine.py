@@ -9,13 +9,15 @@ from pathlib import Path
 import yaml
 
 from .dependency_graph import Edge, _INCLUDE_KINDS, _READ_KINDS
-from .inventory import FileEntry
+from .inventory import FileEntry, _UNC_ABS, _pdftotext
 
 _RULES_FILE = Path(__file__).parent / "rules" / "author_rules.yaml"
 
-# B4 absolute path. The UNC branch requires a hostname letter after `\\` so a regex-escape literal
-# like gsub("\\|", ...) (two backslashes then a metachar) is no longer mistaken for a UNC path.
-_ABS_PATH = re.compile(r'["\']?((?:[A-Za-z]:\\|\\\\[A-Za-z]|/Users/|/home/|~/)[^"\'\r\n]+)["\']?')
+# B4 absolute path. The UNC branch (_UNC_ABS, shared with venue_engine) requires a hostname followed
+# by a path separator, so a regex-escape literal like gsub("\\|", ...) and a LaTeX macro like
+# "\\tau_{1|2}" in texreg custom.coef.names (two backslashes then a token, no separator) are no
+# longer mistaken for a UNC path (issue #19).
+_ABS_PATH = re.compile(r'["\']?((?:[A-Za-z]:\\|' + _UNC_ABS + r'|/Users/|/home/|~/)[^"\'\r\n]+)["\']?')
 _ABS_TARGET = re.compile(r'^\s*(?:[A-Za-z]:\\|\\\\|/|~)')
 _LOOP_HEAD = re.compile(r'^\s*(foreach|forvalues|forv|while|for)\b', re.IGNORECASE)
 _EXPORT_FIXED = re.compile(r'\b(esttab|estout|outreg2?|putexcel|tabout)\b[^\r\n]*using\s+["\']?([^\s"\'`,]+)', re.IGNORECASE)
@@ -72,12 +74,43 @@ _CMD_HEAD = re.compile(r'^\s*(?:cap(?:ture)?\s+|qui(?:etly)?\s+|noi(?:sily)?\s+|
 _COMMENTED_REG = re.compile(r'^\s*(?:\*|//)\s*(reg|regress|areg|xtreg|reghdfe|ivreg\w*|ivregress|ivreghdfe|logit|probit|tobit)\b', re.IGNORECASE)
 _RESTRICTED_WORD = re.compile(r'restrict|confidential|propriet|not\s+public|non-public|unavailable|cannot\s+share|under\s+embargo', re.IGNORECASE)
 _DATA_EXTS = (".dta", ".tab", ".csv", ".rds", ".rdata", ".xlsx", ".parquet")
+# GUI-analysis project files: the analysis lives inside a binary tool file, not a runnable script.
+# Inventory maps these to language "other", so they neither count as code nor as data (issue #8).
+_GUI_PROJECT_EXTS = (".splsm", ".sav", ".jasp", ".omv", ".mpj", ".mtb")
+# A shipped path that lives under an output/results/tables/figures folder — evidence that result
+# artifacts are present in the package (issue #10). Left boundary so `mytables/` etc. do not match.
+_RESULT_DIR = re.compile(r'(?:^|[\\/])(?:output|results|figures|figs|tables|tabs|exhibits)[\\/]', re.IGNORECASE)
+# LLM-generated-data provenance (issue #9). A file name or spreadsheet sheet name matching a STRONG
+# LLM token marks the data as model-generated. `prompt` alone is deliberately EXCLUDED — it is a
+# normal survey/experiment variable name (prompt_response.csv), so it over-fires; it only counts when
+# a strong token is also present (already covered by the strong token). The boundaries are LETTER-only
+# (`(?<![a-z])...(?![a-z])`) so digits and underscores count as delimiters: `gpt4_survey.csv` and
+# `survey_gpt.csv` match, while `budgeting`/`allmusic` (token glued inside a word) do not.
+_LLM_ARTIFACT_TOKEN = re.compile(
+    r'(?<![a-z])(?:gpt|chatgpt|llm|claude|gemini|openai|anthropic|llama|mixtral|'
+    r'large[\s_-]?language[\s_-]?model)(?![a-z])',
+    re.IGNORECASE)
+# A VERSIONED model id (a family + a version), not a bare mention: requiring the version makes an
+# incidental "we used GPT" comment insufficient to clear the finding — the author must record which
+# model snapshot generated the data.
+_MODEL_ID = re.compile(
+    r'\b(gpt[-\s]?\d[\w.]*|gpt-4o|o[134][-\s]?(?:mini|preview)|claude[-\s]?\d[\w.]*|claude-instant|'
+    r'gemini[-\s]?\d[\w.]*|gemini-(?:pro|flash|ultra)|llama[-\s]?\d[\w.]*|mistral[-\s]?\w+|'
+    r'text-davinci-\d|deepseek[-\s]?\w+)\b', re.IGNORECASE)
+# A recorded generation parameter (what makes an LLM run reproducible) or the raw responses.
+_GEN_PARAM = re.compile(
+    r'\b(temperature|top[_\-\s]?p|top[_\-\s]?k|seed|random[_\-\s]?state)\b'
+    r'|\braw\s+(?:api\s+)?response|\bapi\s+response|\bresponse[_\-\s]?id', re.IGNORECASE)
 _DELIMIT = re.compile(r'^\s*#delimit\s*;|^\s*#d\s*;', re.IGNORECASE)
 _R_TABLE_CALL_LONG = re.compile(r'\b(stargazer|xtable|texreg|htmlreg|screenreg)\s*\(', re.IGNORECASE)
 _PROGRAM_DEF = re.compile(r'^\s*program\s+(?:define\s+)?(\w+)', re.IGNORECASE)
 
 # D1 artifact-output coverage
-_TABLE_EXPORT = re.compile(r'\b(esttab|estout|outreg2?|putexcel|putdocx|tabout|stargazer|texreg|htmlreg|etable|modelsummary|write[._]csv|write[._]dta|saveRDS|export\s+delimited)\b', re.IGNORECASE)
+# texreg-family writers all take `file=` and write a table file: texreg (LaTeX), htmlreg (HTML),
+# screenreg (plain text), matrixreg (matrix), wordreg (Word). _R_TABLE_CALL already treats
+# screenreg as a table-builder (line 43), so omitting it here credited the builder but never its
+# export (issue #21). Kept in sync with _R_TABLE_CALL for the texreg family.
+_TABLE_EXPORT = re.compile(r'\b(esttab|estout|outreg2?|putexcel|putdocx|tabout|stargazer|texreg|htmlreg|screenreg|matrixreg|wordreg|etable|modelsummary|write[._]csv|write[._]dta|saveRDS|export\s+delimited)\b', re.IGNORECASE)
 # Follow-up A: a figure producer may be ASSIGNED (`p <- ggplot(...)`, `g = qplot(...)`), which the
 # old `^\s*`-anchored pattern missed entirely. The optional assignment prefix
 # `(?:[\w.$]+\s*(?:<-|<<-|=)\s*)?` admits `name <-`/`name <<-`/`name =` before the producer while the
@@ -747,11 +780,54 @@ _OUT_TABLE_PATH = re.compile(r'(?:^|[\\/])(?:[\w.\-]+[\\/])*tables[\\/]', re.IGN
 _OUT_FIGURE_PATH = re.compile(r'(?:^|[\\/])(?:[\w.\-]+[\\/])*figures[\\/]', re.IGNORECASE)
 
 
+# Label-only options carry human-readable text, never an output path. After multi-line call joining
+# (issue #20) widened the window in which a `tables/`/`figures/` path can be seen, a decoy path inside
+# one of these (e.g. caption="see output/tables/t1") must not count as an export target. Handles the
+# `key = "..."` / `key = c("...")` and `key(...)` (one nested-paren level) forms.
+_LABEL_OPT_STRIP = re.compile(
+    r'\b(?:caption|title|subtitle|sub|note|addnote|label|mtitle|xtitle|ytitle|main|legend)\s*'
+    r'(?:=\s*(?:c\s*\()?\s*["\'][^"\']*["\']|\((?:[^()]|\([^()]*\))*\))',
+    re.IGNORECASE,
+)
+
+
+def _strip_label_opts(unit: str) -> str:
+    return _LABEL_OPT_STRIP.sub(" ", unit)
+
+
+def _call_unit_from(lines: list[str], start: int, cap: int = 30) -> tuple[str, int]:
+    """Join lines[start:] into one logical unit spanning a single parenthesized call: accumulate until
+    the running paren depth (measured on string/comment-masked text) returns to 0, capped at `cap`
+    lines. Returns (joined_raw, end_exclusive). Idiomatic multi-line R calls put `file=` on a
+    continuation line (issue #20); a per-line scan never saw the command and its path together. If the
+    call never balances within `cap` (malformed / over-long), returns just the start line, so a later
+    balanced call (e.g. a downstream read.csv INPUT) is never swallowed as this call's output."""
+    depth = 0
+    raw_parts: list[str] = []
+    for j in range(start, min(len(lines), start + cap)):
+        raw_parts.append(lines[j])
+        masked = _mask_r_strings_comments(lines[j])
+        depth += masked.count("(") - masked.count(")")
+        if depth <= 0:
+            return " ".join(raw_parts), j + 1
+    return lines[start], start + 1
+
+
 def _has_canonical_export(body: list[str], cmd_re: re.Pattern[str], out_re: re.Pattern[str]) -> bool:
-    for ln in body:
-        masked = _mask_r_strings_comments(ln)
-        if cmd_re.search(masked) and out_re.search(ln):
-            return True
+    # Scan for an export command, then look for the canonical output path within that command's whole
+    # (possibly multi-line) call, not just the command's physical line (issue #20). Single-line calls
+    # collapse to the previous per-line behavior. Label-only options are stripped so a decoy path in a
+    # caption/title/note never counts.
+    i, n = 0, len(body)
+    while i < n:
+        masked = _mask_r_strings_comments(body[i])
+        if cmd_re.search(masked):
+            unit, end = _call_unit_from(body, i)
+            if out_re.search(_strip_label_opts(unit)):
+                return True
+            i = max(end, i + 1)
+            continue
+        i += 1
     return False
 
 
@@ -777,6 +853,29 @@ def _section_spans(lines: list[str], header_re: re.Pattern[str]) -> list[tuple[s
     return spans
 
 
+def _toplevel_estimations_needing_table(text: str) -> list[int]:
+    """Top-level estimation lines that imply an unlabeled table because their output is NOT already
+    captured as a saved figure (issue #22). Principle: every estimation needs a durable, comparable
+    artifact, and a saved figure counts as one. So an estimation inside a `# Figure N` section that
+    has a valid output/figures/ export is figure-served and demands no table; likewise, in a
+    header-less script that produces a canonical figure export next to a graph command, the
+    estimations feed that figure. A naked estimation with neither a table nor a figure export still
+    needs a table, so the gate keeps its teeth. Shared by D1 and the static gate so they agree."""
+    lines = text.splitlines()
+    toplevel = _toplevel_estimation_lines(text)
+    if not toplevel:
+        return []
+    fig_spans = [
+        (s, e) for (_label, s, e) in _section_spans(lines, _FIGURE_HEADER)
+        if _has_canonical_export(lines[s:e], _GRAPH_EXPORT, _OUT_FIGURE_PATH)
+    ]
+    if fig_spans:
+        return [ln for ln in toplevel if not any(s <= ln - 1 < e for (s, e) in fig_spans)]
+    if _toplevel_graph_line(text) is not None and _has_canonical_export(lines, _GRAPH_EXPORT, _OUT_FIGURE_PATH):
+        return []
+    return toplevel
+
+
 def _detect_uncaptured_artifacts(path: str, text: str) -> list[dict[str, Any]]:
     lines = text.splitlines()
     hits: list[dict[str, Any]] = []
@@ -790,10 +889,10 @@ def _detect_uncaptured_artifacts(path: str, text: str) -> list[dict[str, Any]]:
             if has_est and not has_exp:
                 hits.append(_ev(path, start + 1, f"{label}: estimations build this table but no export saves it to output/tables/"))
     else:
-        toplevel = _toplevel_estimation_lines(text)
+        needing = _toplevel_estimations_needing_table(text)
         has_exp = _has_canonical_export(lines, _TABLE_EXPORT, _OUT_TABLE_PATH)
-        if toplevel and not has_exp:
-            hits.append(_ev(path, toplevel[0], "estimations build a table but no export saves coefficients to output/tables/"))
+        if needing and not has_exp:
+            hits.append(_ev(path, needing[0], "estimations build a table but no export saves coefficients to output/tables/"))
 
     figure_spans = _section_spans(lines, _FIGURE_HEADER)
     if figure_spans:
@@ -1024,6 +1123,71 @@ def _missing_inputs(edges: list[Edge], lang_of) -> tuple[list[dict[str, Any]], l
     return a5, a14, a15
 
 
+def _has_substantive_code(texts: dict[str, str]) -> bool:
+    """True if any shipped code file has at least one line that is not blank and not a comment. An
+    empty or comment-only .do/.R/.py is not runnable, so it must not silence the no-code finding
+    (issue #8). `texts` holds only code files (see _texts)."""
+    for t in texts.values():
+        for ln in t.splitlines():
+            s = ln.strip()
+            if not s or s.startswith(("*", "//", "#")):
+                continue
+            return True
+    return False
+
+
+def _xlsx_sheet_names(path: Path) -> list[str]:
+    """Sheet names inside an .xlsx (a zip) read from xl/workbook.xml with stdlib only — no openpyxl
+    dependency. Used to spot an LLM/prompt sheet in an otherwise innocuously named workbook (issue #9).
+    Returns [] on any failure (not a zip, missing part, parse error)."""
+    import zipfile
+
+    try:
+        with zipfile.ZipFile(path) as zf:
+            xml = zf.read("xl/workbook.xml").decode("utf-8", errors="replace")
+    except (OSError, KeyError, zipfile.BadZipFile):
+        return []
+    return re.findall(r'<sheet[^>]*\bname="([^"]+)"', xml)
+
+
+def _detect_llm_provenance(root: Path, entries: list[FileEntry], texts: dict[str, str]) -> list[dict[str, Any]]:
+    """D9: data generated by an LLM must record its provenance (which model snapshot, and the
+    parameters that make a stochastic run reproducible) or it cannot be regenerated (issue #9).
+    Fires when an LLM artifact is shipped (a file name or .xlsx sheet name with a strong LLM token)
+    but the package records no versioned model id together with a generation parameter or the raw
+    responses. Provenance is looked for across READMEs (.md/.txt/.tex/.rst and .pdf) and code.
+
+    Scope: provenance presence is checked package-wide, not bound to each artifact — a v1 advisory
+    heuristic. It deliberately ignores the bare token `prompt` (a common survey variable name) and
+    requires a VERSIONED model id (not an incidental 'we used GPT' mention) to clear the finding."""
+    artifacts: list[str] = []
+    for e in entries:
+        if e.language in {"stata", "r", "python"}:
+            continue  # the rule is about generated DATA, not a gpt-querying script
+        if _LLM_ARTIFACT_TOKEN.search(Path(e.path).name):
+            artifacts.append(e.path)
+            continue
+        if e.path.lower().endswith(".xlsx"):
+            if any(_LLM_ARTIFACT_TOKEN.search(s) for s in _xlsx_sheet_names(root / e.path)):
+                artifacts.append(e.path)
+    if not artifacts:
+        return []
+
+    prov_parts: list[str] = list(texts.values())  # code files
+    for e in entries:
+        low = e.path.lower()
+        if low.endswith((".md", ".txt", ".tex", ".rst")):
+            prov_parts.append((root / e.path).read_text(encoding="utf-8", errors="replace"))
+        elif low.endswith(".pdf"):
+            extracted = _pdftotext(root / e.path)
+            if extracted:
+                prov_parts.append(extracted)
+    blob = "\n".join(prov_parts)
+    if _MODEL_ID.search(blob) and _GEN_PARAM.search(blob):
+        return []
+    return [_ev(p) for p in sorted(set(artifacts))][:8]
+
+
 def run(root: Path, entries: list[FileEntry], edges: list[Edge], table_exports) -> list[Finding]:
     root = root.resolve()
     rules = {r["id"]: r for r in load_rules()}
@@ -1068,6 +1232,27 @@ def run(root: Path, entries: list[FileEntry], edges: list[Edge], table_exports) 
 
     doc_files = [e.path for e in entries if e.language == "doc" and e.path.lower().endswith((".md", ".txt"))]
     data_files = [e.path for e in entries if e.language == "data"]
+
+    # Issue #8: a package with analysis material but no runnable code cannot be reproducibility-checked.
+    # Trigger on data files OR a GUI-analysis project file (so a SmartPLS .splsm whose data is embedded
+    # in the binary still fires) AND no substantive code (an empty/comment-only script does not count).
+    # A document-only deposit with no data/GUI file is left silent — a qualitative corpus expects no
+    # code, and nagging it is the false expectation issue #24 warns about.
+    gui_projects = [e.path for e in entries if Path(e.path).suffix.lower() in _GUI_PROJECT_EXTS]
+    analysis_material = sorted(set(data_files) | set(gui_projects))
+    code_is_substantive = _has_substantive_code(texts)
+    if analysis_material and not code_is_substantive:
+        emit("A16-no-executable-code", [_ev(p) for p in analysis_material][:8],
+             f"{len(analysis_material)} data/analysis file(s) but no runnable .do/.R/.py script; "
+             "computational reproducibility cannot be assessed from a static scan.")
+        # Issue #10: for a no-code deposit that also ships no result artifacts, a reproduction has
+        # nothing to diff against. Only fires without code (with code, D1 + the gate own coverage) and
+        # only with data present (a doc-only qualitative deposit expects no results, per #24).
+        if data_files and not any(_RESULT_DIR.search(e.path) for e in entries):
+            emit("D8-results-not-shipped", [_ev(p) for p in sorted(data_files)][:8],
+                 "Package ships data but no runnable code and no result tables/figures under an "
+                 "output/ folder; a reproduction has nothing to compare against.")
+
     n_files = len(script_paths) + len(data_files)
     if n_files > 1:
         documented = set()
@@ -1104,6 +1289,9 @@ def run(root: Path, entries: list[FileEntry], edges: list[Edge], table_exports) 
 
     emit("D7-codebook-coverage", _detect_codebook_coverage(root, entries, texts),
          "A shipped codebook exists but some variables used in estimation commands are not documented in it.")
+
+    emit("D9-llm-data-provenance", _detect_llm_provenance(root, entries, texts),
+         "LLM-generated data is shipped with no recorded model version, generation parameters, or raw responses.")
 
     for path, text in texts.items():
         lang = _lang_of(entries, path)
