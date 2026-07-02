@@ -58,8 +58,8 @@ Detector fixes:
   code, instead of `needs_author_action` items a qualitative author can never satisfy (#24). README,
   data-citation, and license checks stay active.
 
-Tests: `core/tests/test_issue_batch_2026_07.py` (20 cases) pins each fix and its anti-bypass /
-no-false-negative boundary.
+Tests: `core/tests/test_issue_batch_2026_07.py` (30 cases) pins each fix and its anti-bypass /
+no-false-negative boundary. Full suite: 197 passed.
 
 ## plugin 0.4.7: fix invalid Claude plugin manifest (2026-06-23)
 

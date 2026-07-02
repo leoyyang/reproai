@@ -32,7 +32,7 @@ export const changelog = {
   releases: [
     {
       version: "0.4.8",
-      date: "July 1, 2026",
+      date: "July 2, 2026",
       title: "Handles GUI-only and qualitative deposits, and stops a few false alarms on R packages.",
       changes: [
         {
