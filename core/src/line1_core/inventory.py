@@ -81,3 +81,21 @@ def scan(root: Path) -> list[FileEntry]:
 
 def code_entries(entries: list[FileEntry]) -> list[FileEntry]:
     return [e for e in entries if e.language in {"stata", "r", "python"}]
+
+
+def _pdftotext(path: Path) -> str | None:
+    """Extract text from a PDF via poppler's `pdftotext`, when available. Reading a document is not
+    executing author code. Returns None on any failure (no poppler, extraction error) so the caller
+    falls back gracefully — no hard dependency is introduced. Shared by venue_engine (README section
+    checks) and rule_engine (reading a PDF README for LLM-provenance signals, issue #9)."""
+    import shutil
+    import subprocess
+
+    exe = shutil.which("pdftotext")
+    if exe is None:
+        return None
+    try:
+        proc = subprocess.run([exe, "-q", str(path), "-"], capture_output=True, text=True, timeout=20)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return proc.stdout if proc.returncode == 0 else None

@@ -8,7 +8,7 @@ from pathlib import Path
 
 import yaml
 
-from .inventory import FileEntry, _UNC_ABS, code_entries
+from .inventory import FileEntry, _UNC_ABS, code_entries, _pdftotext
 from .dependency_graph import Edge, entry_points as _entry_points, build as _build_edges
 
 _VENUE_DIR = Path(__file__).parent / "venues"
@@ -81,21 +81,7 @@ def _license_at_root(root: Path) -> str | None:
     return None
 
 
-def _pdftotext(path: Path) -> str | None:
-    """Extract text from a PDF README via poppler's `pdftotext`, when available. Reading a document is
-    not executing author code. Returns None on any failure (no poppler, extraction error) so the caller
-    falls back gracefully — no hard dependency is introduced."""
-    import shutil
-    import subprocess
-
-    exe = shutil.which("pdftotext")
-    if exe is None:
-        return None
-    try:
-        proc = subprocess.run([exe, "-q", str(path), "-"], capture_output=True, text=True, timeout=20)
-    except (OSError, subprocess.SubprocessError):
-        return None
-    return proc.stdout if proc.returncode == 0 else None
+# _pdftotext moved to inventory (shared I/O helper, used by venue_engine and rule_engine); imported above.
 
 
 def _has_master(entries: list[FileEntry], edges: list[Edge]) -> list[dict[str, Any]]:

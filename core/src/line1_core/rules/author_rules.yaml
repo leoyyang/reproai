@@ -1,5 +1,5 @@
 schema_version: 3
-rules_version: "2026.07.01"
+rules_version: "2026.07.02"
 fields: "id | category(structural|code-style|environment|normalization) | kind(defect|normalization) | priority(P0..P4 by downstream reproducibility cost) | rule | detection | languages | source_lessons | why_downstream | target_form | lossless_note | propose_only | output_changing"
 rewrite_fields_legend:
   why_downstream: "Plain explanation of how this finding hurts a downstream reproducibility run — fed to the host LLM as the 'why' of a fix."
@@ -601,4 +601,17 @@ rules:
     why_downstream: "If neither the code that builds a result nor the result file itself ships, a reproduction has nothing to diff against --- the reviewer cannot confirm any number or figure in the paper."
     target_form: "Ship the result tables and figures the paper reports (e.g. under output/tables/ and output/figures/); if they currently live only in the manuscript, add them to the package so each reported artifact has a durable, comparable file."
     lossless_note: "The engine cannot generate results (there is no code to run). Describe the missing result artifacts only; do not fabricate any output file."
+    propose_only: true
+
+  - id: D9-llm-data-provenance
+    category: structural
+    kind: normalization
+    priority: P2
+    rule: "Author should record the provenance of any LLM-generated data: the exact model id and snapshot/version, the generation parameters (temperature and top-p, and the seed where the API supports one), or the raw API responses --- so the generation step can be reproduced or at least audited."
+    detection: "The package ships an LLM artifact --- a file name or an .xlsx sheet name containing a strong LLM token (gpt, chatgpt, llm, claude, gemini, openai, anthropic, llama, mixtral, 'large language model') --- but no README (.md/.txt/.tex/.rst or .pdf) or code file records a VERSIONED model id together with a generation parameter (temperature/top-p/top-k/seed) or the raw responses. The bare word `prompt` is ignored (it is a common survey/experiment variable name); provenance presence is checked package-wide, not bound to each artifact."
+    languages: [stata, r, python]
+    source_lessons: ["missed detection #9: a package shipped four GPT-4o-generated datasets plus 'GPT Prompts.xlsx' and recorded no model version, temperature, or seed"]
+    why_downstream: "An LLM generation step is stochastic and versioned: without the model snapshot and the parameters (or the raw responses), a re-run draws different data than the paper used, and the central input to the analysis cannot be reproduced or audited."
+    target_form: "Add a short provenance note (in the README or a manifest) recording, for each LLM-generated dataset: the exact model id and snapshot date/version, temperature and top-p, the seed if the API supports one, and the prompt template. Where the API is non-deterministic, ship the raw API responses alongside the derived data."
+    lossless_note: "Provenance is author knowledge the engine cannot recover from the data --- it must NOT invent a model id, date, or parameter value. Describe what is missing; the author supplies the real values."
     propose_only: true

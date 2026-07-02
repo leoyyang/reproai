@@ -9,7 +9,7 @@ from pathlib import Path
 import yaml
 
 from .dependency_graph import Edge, _INCLUDE_KINDS, _READ_KINDS
-from .inventory import FileEntry, _UNC_ABS
+from .inventory import FileEntry, _UNC_ABS, _pdftotext
 
 _RULES_FILE = Path(__file__).parent / "rules" / "author_rules.yaml"
 
@@ -80,6 +80,27 @@ _GUI_PROJECT_EXTS = (".splsm", ".sav", ".jasp", ".omv", ".mpj", ".mtb")
 # A shipped path that lives under an output/results/tables/figures folder — evidence that result
 # artifacts are present in the package (issue #10). Left boundary so `mytables/` etc. do not match.
 _RESULT_DIR = re.compile(r'(?:^|[\\/])(?:output|results|figures|figs|tables|tabs|exhibits)[\\/]', re.IGNORECASE)
+# LLM-generated-data provenance (issue #9). A file name or spreadsheet sheet name matching a STRONG
+# LLM token marks the data as model-generated. `prompt` alone is deliberately EXCLUDED — it is a
+# normal survey/experiment variable name (prompt_response.csv), so it over-fires; it only counts when
+# a strong token is also present (already covered by the strong token). The boundaries are LETTER-only
+# (`(?<![a-z])...(?![a-z])`) so digits and underscores count as delimiters: `gpt4_survey.csv` and
+# `survey_gpt.csv` match, while `budgeting`/`allmusic` (token glued inside a word) do not.
+_LLM_ARTIFACT_TOKEN = re.compile(
+    r'(?<![a-z])(?:gpt|chatgpt|llm|claude|gemini|openai|anthropic|llama|mixtral|'
+    r'large[\s_-]?language[\s_-]?model)(?![a-z])',
+    re.IGNORECASE)
+# A VERSIONED model id (a family + a version), not a bare mention: requiring the version makes an
+# incidental "we used GPT" comment insufficient to clear the finding — the author must record which
+# model snapshot generated the data.
+_MODEL_ID = re.compile(
+    r'\b(gpt[-\s]?\d[\w.]*|gpt-4o|o[134][-\s]?(?:mini|preview)|claude[-\s]?\d[\w.]*|claude-instant|'
+    r'gemini[-\s]?\d[\w.]*|gemini-(?:pro|flash|ultra)|llama[-\s]?\d[\w.]*|mistral[-\s]?\w+|'
+    r'text-davinci-\d|deepseek[-\s]?\w+)\b', re.IGNORECASE)
+# A recorded generation parameter (what makes an LLM run reproducible) or the raw responses.
+_GEN_PARAM = re.compile(
+    r'\b(temperature|top[_\-\s]?p|top[_\-\s]?k|seed|random[_\-\s]?state)\b'
+    r'|\braw\s+(?:api\s+)?response|\bapi\s+response|\bresponse[_\-\s]?id', re.IGNORECASE)
 _DELIMIT = re.compile(r'^\s*#delimit\s*;|^\s*#d\s*;', re.IGNORECASE)
 _R_TABLE_CALL_LONG = re.compile(r'\b(stargazer|xtable|texreg|htmlreg|screenreg)\s*\(', re.IGNORECASE)
 _PROGRAM_DEF = re.compile(r'^\s*program\s+(?:define\s+)?(\w+)', re.IGNORECASE)
@@ -832,6 +853,29 @@ def _section_spans(lines: list[str], header_re: re.Pattern[str]) -> list[tuple[s
     return spans
 
 
+def _toplevel_estimations_needing_table(text: str) -> list[int]:
+    """Top-level estimation lines that imply an unlabeled table because their output is NOT already
+    captured as a saved figure (issue #22). Principle: every estimation needs a durable, comparable
+    artifact, and a saved figure counts as one. So an estimation inside a `# Figure N` section that
+    has a valid output/figures/ export is figure-served and demands no table; likewise, in a
+    header-less script that produces a canonical figure export next to a graph command, the
+    estimations feed that figure. A naked estimation with neither a table nor a figure export still
+    needs a table, so the gate keeps its teeth. Shared by D1 and the static gate so they agree."""
+    lines = text.splitlines()
+    toplevel = _toplevel_estimation_lines(text)
+    if not toplevel:
+        return []
+    fig_spans = [
+        (s, e) for (_label, s, e) in _section_spans(lines, _FIGURE_HEADER)
+        if _has_canonical_export(lines[s:e], _GRAPH_EXPORT, _OUT_FIGURE_PATH)
+    ]
+    if fig_spans:
+        return [ln for ln in toplevel if not any(s <= ln - 1 < e for (s, e) in fig_spans)]
+    if _toplevel_graph_line(text) is not None and _has_canonical_export(lines, _GRAPH_EXPORT, _OUT_FIGURE_PATH):
+        return []
+    return toplevel
+
+
 def _detect_uncaptured_artifacts(path: str, text: str) -> list[dict[str, Any]]:
     lines = text.splitlines()
     hits: list[dict[str, Any]] = []
@@ -845,10 +889,10 @@ def _detect_uncaptured_artifacts(path: str, text: str) -> list[dict[str, Any]]:
             if has_est and not has_exp:
                 hits.append(_ev(path, start + 1, f"{label}: estimations build this table but no export saves it to output/tables/"))
     else:
-        toplevel = _toplevel_estimation_lines(text)
+        needing = _toplevel_estimations_needing_table(text)
         has_exp = _has_canonical_export(lines, _TABLE_EXPORT, _OUT_TABLE_PATH)
-        if toplevel and not has_exp:
-            hits.append(_ev(path, toplevel[0], "estimations build a table but no export saves coefficients to output/tables/"))
+        if needing and not has_exp:
+            hits.append(_ev(path, needing[0], "estimations build a table but no export saves coefficients to output/tables/"))
 
     figure_spans = _section_spans(lines, _FIGURE_HEADER)
     if figure_spans:
@@ -1092,6 +1136,58 @@ def _has_substantive_code(texts: dict[str, str]) -> bool:
     return False
 
 
+def _xlsx_sheet_names(path: Path) -> list[str]:
+    """Sheet names inside an .xlsx (a zip) read from xl/workbook.xml with stdlib only — no openpyxl
+    dependency. Used to spot an LLM/prompt sheet in an otherwise innocuously named workbook (issue #9).
+    Returns [] on any failure (not a zip, missing part, parse error)."""
+    import zipfile
+
+    try:
+        with zipfile.ZipFile(path) as zf:
+            xml = zf.read("xl/workbook.xml").decode("utf-8", errors="replace")
+    except (OSError, KeyError, zipfile.BadZipFile):
+        return []
+    return re.findall(r'<sheet[^>]*\bname="([^"]+)"', xml)
+
+
+def _detect_llm_provenance(root: Path, entries: list[FileEntry], texts: dict[str, str]) -> list[dict[str, Any]]:
+    """D9: data generated by an LLM must record its provenance (which model snapshot, and the
+    parameters that make a stochastic run reproducible) or it cannot be regenerated (issue #9).
+    Fires when an LLM artifact is shipped (a file name or .xlsx sheet name with a strong LLM token)
+    but the package records no versioned model id together with a generation parameter or the raw
+    responses. Provenance is looked for across READMEs (.md/.txt/.tex/.rst and .pdf) and code.
+
+    Scope: provenance presence is checked package-wide, not bound to each artifact — a v1 advisory
+    heuristic. It deliberately ignores the bare token `prompt` (a common survey variable name) and
+    requires a VERSIONED model id (not an incidental 'we used GPT' mention) to clear the finding."""
+    artifacts: list[str] = []
+    for e in entries:
+        if e.language in {"stata", "r", "python"}:
+            continue  # the rule is about generated DATA, not a gpt-querying script
+        if _LLM_ARTIFACT_TOKEN.search(Path(e.path).name):
+            artifacts.append(e.path)
+            continue
+        if e.path.lower().endswith(".xlsx"):
+            if any(_LLM_ARTIFACT_TOKEN.search(s) for s in _xlsx_sheet_names(root / e.path)):
+                artifacts.append(e.path)
+    if not artifacts:
+        return []
+
+    prov_parts: list[str] = list(texts.values())  # code files
+    for e in entries:
+        low = e.path.lower()
+        if low.endswith((".md", ".txt", ".tex", ".rst")):
+            prov_parts.append((root / e.path).read_text(encoding="utf-8", errors="replace"))
+        elif low.endswith(".pdf"):
+            extracted = _pdftotext(root / e.path)
+            if extracted:
+                prov_parts.append(extracted)
+    blob = "\n".join(prov_parts)
+    if _MODEL_ID.search(blob) and _GEN_PARAM.search(blob):
+        return []
+    return [_ev(p) for p in sorted(set(artifacts))][:8]
+
+
 def run(root: Path, entries: list[FileEntry], edges: list[Edge], table_exports) -> list[Finding]:
     root = root.resolve()
     rules = {r["id"]: r for r in load_rules()}
@@ -1193,6 +1289,9 @@ def run(root: Path, entries: list[FileEntry], edges: list[Edge], table_exports) 
 
     emit("D7-codebook-coverage", _detect_codebook_coverage(root, entries, texts),
          "A shipped codebook exists but some variables used in estimation commands are not documented in it.")
+
+    emit("D9-llm-data-provenance", _detect_llm_provenance(root, entries, texts),
+         "LLM-generated data is shipped with no recorded model version, generation parameters, or raw responses.")
 
     for path, text in texts.items():
         lang = _lang_of(entries, path)

@@ -5,6 +5,7 @@ that "simplifies" a fix and reopens the hole fails here.
 """
 from __future__ import annotations
 
+import zipfile
 from pathlib import Path
 
 from line1_core import coordinator, gate, inventory, dependency_graph, venue_engine
@@ -16,6 +17,16 @@ def _write(pkg: Path, files: dict[str, str]) -> Path:
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(content, encoding="utf-8")
     return pkg
+
+
+def _write_xlsx(path: Path, sheet_names: list[str]) -> None:
+    """Minimal .xlsx (a zip with just xl/workbook.xml) carrying the given sheet names."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    sheets = "".join(
+        f'<sheet name="{n}" sheetId="{i + 1}" r:id="rId{i + 1}"/>' for i, n in enumerate(sheet_names)
+    )
+    with zipfile.ZipFile(path, "w") as z:
+        z.writestr("xl/workbook.xml", f'<?xml version="1.0"?><workbook><sheets>{sheets}</sheets></workbook>')
 
 
 def _fired(root: Path, venue: str | None = None) -> set[str]:
@@ -198,3 +209,77 @@ def test_code_presuming_venue_checks_active_with_code(tmp_path: Path) -> None:
     status = _venue_status(pkg)
     assert status.get("has_master_script") == "pass"
     assert status.get("no_absolute_paths") in {"pass", "fail"}  # ran, not skipped
+
+
+# ---------------------------------------------------------------------------- #22 figure-served estimations
+def test_figure_only_script_does_not_demand_a_phantom_table(tmp_path: Path) -> None:
+    pkg = _write(tmp_path / "p", {"a.R": (
+        "# --> Figure 1\n"
+        "m1 <- glm(y ~ x * g, data = df, family = binomial())\n"
+        'pdf(file = "output/figures/figure_1.pdf")\n'
+        "plot(m1)\ndev.off()\n"
+    )})
+    code, report = gate.gate_static(pkg)
+    assert code == 0 and report["passed"], report
+    # exactly one artifact (the figure), no unlabeled table
+    assert report["expected_total"] == 1
+    assert "D1-output-artifact-coverage" not in _fired(pkg)
+
+
+def test_stata_regression_grouped_with_its_plot_needs_no_table(tmp_path: Path) -> None:
+    pkg = _write(tmp_path / "p", {"a.do": (
+        "* Figure 1\nreg y x\ncoefplot\ngraph export \"output/figures/f1.png\", replace\n"
+    )})
+    code, report = gate.gate_static(pkg)
+    assert code == 0 and report["passed"], report
+
+
+def test_naked_regression_still_demands_a_table(tmp_path: Path) -> None:
+    # teeth preserved: an estimation with neither a table nor a figure export must still fail the gate
+    pkg = _write(tmp_path / "p", {"a.do": "use d.dta\nreg y x\n"})
+    code, report = gate.gate_static(pkg)
+    assert code == 1
+    assert any(a["artifact_id"] == "Table (unlabeled)" for a in report["missing_export"])
+
+
+def test_unlabeled_table_with_real_export_still_passes(tmp_path: Path) -> None:
+    pkg = _write(tmp_path / "p", {"a.do": 'reg y x\nesttab using "output/tables/t.csv", replace\n'})
+    code, report = gate.gate_static(pkg)
+    assert code == 0 and report["passed"]
+
+
+# ---------------------------------------------------------------------------- #9 LLM data provenance
+def test_d9_fires_on_llm_data_without_provenance(tmp_path: Path) -> None:
+    pkg = _write(tmp_path / "p", {"gpt4_survey.csv": "a\n1\n", "README.md": "we generated the survey"})
+    _write_xlsx(pkg / "GPT Prompts.xlsx", ["Sheet1"])
+    assert "D9-llm-data-provenance" in _fired(pkg)
+
+
+def test_d9_silent_with_full_provenance(tmp_path: Path) -> None:
+    pkg = _write(tmp_path / "p", {
+        "gpt4_survey.csv": "a\n1\n",
+        "README.md": "Generated with gpt-4o (snapshot 2024-08-06), temperature = 0.7, seed = 42."})
+    assert "D9-llm-data-provenance" not in _fired(pkg)
+
+
+def test_d9_ignores_bare_prompt_variable_name(tmp_path: Path) -> None:
+    # 'prompt' is a common survey variable name; without a strong LLM token it must not fire
+    pkg = _write(tmp_path / "p", {"prompt_response.csv": "a\n1\n", "analysis.do": "reg y x\n"})
+    assert "D9-llm-data-provenance" not in _fired(pkg)
+
+
+def test_d9_requires_versioned_model_id_not_vague_mention(tmp_path: Path) -> None:
+    # a vague "we used GPT" with no versioned id / parameter does NOT clear the finding
+    pkg = _write(tmp_path / "p", {"gpt_data.csv": "a\n1\n", "README.md": "We used GPT to generate this."})
+    assert "D9-llm-data-provenance" in _fired(pkg)
+
+
+def test_d9_detects_llm_sheet_in_innocuous_workbook(tmp_path: Path) -> None:
+    pkg = _write(tmp_path / "p", {"README.md": "survey data"})
+    _write_xlsx(pkg / "data.xlsx", ["Responses", "ChatGPT prompts"])
+    assert "D9-llm-data-provenance" in _fired(pkg)
+
+
+def test_d9_silent_on_ordinary_package(tmp_path: Path) -> None:
+    pkg = _write(tmp_path / "p", {"a.do": "use d.dta\nreg y x\n", "d.dta": "x\n1\n"})
+    assert "D9-llm-data-provenance" not in _fired(pkg)

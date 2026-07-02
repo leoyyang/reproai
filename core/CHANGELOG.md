@@ -7,10 +7,11 @@ rules in over time (improve-with-use).
 
 Versioning: `rules_version` is date-based `YYYY.MM.DD` (bump when a rule is added/changed/promoted).
 
-## rules_version 2026.07.01: no-code deposits, texreg family, and detector-consistency fixes
+## rules_version 2026.07.02: no-code deposits, LLM-data provenance, texreg family, detector-consistency
 
-Batch fixing GitHub issues #8, #10, #19, #20, #21, #23, #24 (reported by an external user running
-`reproai check` on R/Stata and GUI-only packages). New rules + detector fixes; no engine API change.
+Batch fixing GitHub issues #8, #9, #10, #19, #20, #21, #22, #23, #24 (reported by an external user
+running `reproai check` on R/Stata and GUI-only packages). New rules + detector fixes; no engine API
+change.
 
 New rules:
 - `A16-no-executable-code` (P1, structural, propose_only): fires when the package ships analysis
@@ -22,8 +23,21 @@ New rules:
   no result artifacts (nothing under an `output/`/`results/`/`tables/`/`figures/` folder), flags that
   a reproduction has nothing to diff against (#10). Only fires without code (with code, D1 and the
   gate own output coverage) and only with data present.
+- `D9-llm-data-provenance` (P2, normalization, propose_only): fires when the package ships an LLM
+  artifact (a file name or `.xlsx` sheet name with a strong LLM token: gpt/chatgpt/llm/claude/
+  gemini/openai/anthropic/llama/mixtral) but records no versioned model id together with a generation
+  parameter (temperature/top-p/seed) or the raw responses (#9). The bare word `prompt` is ignored (a
+  common survey variable name); token boundaries are letter-only so `gpt4_survey.csv` matches but
+  `budgeting`/`allmusic` do not; provenance is read from READMEs (.md/.txt/.tex/.rst and .pdf) and
+  code. Provenance presence is checked package-wide (a v1 advisory heuristic, not artifact-bound).
 
 Detector fixes:
+- `D1` + static gate unlabeled-table branch: a figures-only script (estimations that only feed saved
+  plots) was forced to export a phantom "Table (unlabeled)" and failed the gate. Now an estimation is
+  covered if it produces a durable artifact and a saved figure counts: an estimation inside a
+  `# Figure N` section with a valid `output/figures/` export (or in a header-less figure-producing
+  script) demands no table. A naked estimation with neither a table nor a figure export still needs a
+  table, so the gate keeps its teeth. Shared helper keeps D1 and the gate in lockstep (#22).
 - `B4-no-abs-paths` + venue `no_absolute_paths`: the UNC branch matched two backslashes + a letter,
   so a LaTeX macro in an R string (`"\\tau_{1|2}"` in `texreg` `custom.coef.names`) was flagged as an
   absolute path and failed the venue check. UNC now requires host + separator (shared `_UNC_ABS`
