@@ -7,6 +7,63 @@ rules in over time (improve-with-use).
 
 Versioning: `rules_version` is date-based `YYYY.MM.DD` (bump when a rule is added/changed/promoted).
 
+## rules_version 2026.07.02: no-code deposits, LLM-data provenance, texreg family, detector-consistency
+
+Batch fixing GitHub issues #8, #9, #10, #19, #20, #21, #22, #23, #24 (reported by an external user
+running `reproai check` on R/Stata and GUI-only packages). New rules + detector fixes; no engine API
+change.
+
+New rules:
+- `A16-no-executable-code` (P1, structural, propose_only): fires when the package ships analysis
+  material (data files, or a GUI-analysis project file: SmartPLS `.splsm`, SPSS `.sav`, JASP,
+  jamovi, Minitab) but has no substantive executable code. Closes the gap where a GUI-only package
+  passed with 0 blockers, reading as "fine" when computational reproducibility was never assessable
+  (#8). A document-only deposit with no data stays silent (a qualitative corpus expects no code).
+- `D8-results-not-shipped` (P3, normalization, propose_only): for a no-code deposit that also ships
+  no result artifacts (nothing under an `output/`/`results/`/`tables/`/`figures/` folder), flags that
+  a reproduction has nothing to diff against (#10). Only fires without code (with code, D1 and the
+  gate own output coverage) and only with data present.
+- `D9-llm-data-provenance` (P2, normalization, propose_only): fires when the package ships an LLM
+  artifact (a file name or `.xlsx` sheet name with a strong LLM token: gpt/chatgpt/llm/claude/
+  gemini/openai/anthropic/llama/mixtral) but records no versioned model id together with a generation
+  parameter (temperature/top-p/seed) or the raw responses (#9). The bare word `prompt` is ignored (a
+  common survey variable name); token boundaries are letter-only so `gpt4_survey.csv` matches but
+  `budgeting`/`allmusic` do not; provenance is read from READMEs (.md/.txt/.tex/.rst and .pdf) and
+  code. Provenance presence is checked package-wide (a v1 advisory heuristic, not artifact-bound).
+
+Detector fixes:
+- `D1` + static gate unlabeled-table branch: a figures-only script (estimations that only feed saved
+  plots) was forced to export a phantom "Table (unlabeled)" and failed the gate. Now an estimation is
+  covered if it produces a durable artifact and a saved figure counts: an estimation inside a
+  `# Figure N` section with a valid `output/figures/` export (or in a header-less figure-producing
+  script) demands no table. A naked estimation with neither a table nor a figure export still needs a
+  table, so the gate keeps its teeth. Shared helper keeps D1 and the gate in lockstep (#22).
+- `B4-no-abs-paths` + venue `no_absolute_paths`: the UNC branch matched two backslashes + a letter,
+  so a LaTeX macro in an R string (`"\\tau_{1|2}"` in `texreg` `custom.coef.names`) was flagged as an
+  absolute path and failed the venue check. UNC now requires host + separator (shared `_UNC_ABS`
+  across both engines); an IP-addressed host (`\\192.168.1.5\...`) still flags (#19).
+- `D1` + static gate export detection: credited an export only when the command token and the
+  `tables/`/`figures/` path sat on the SAME physical line, so idiomatic multi-line R calls
+  (`texreg(..., file = "output/tables/x.txt")` with `file=` on a continuation line) were missed. Now
+  joins the export command's whole parenthesized call; a decoy path inside a caption/note/title is
+  stripped, and a downstream `read.csv` input is never swallowed (#20).
+- `_TABLE_EXPORT`: added `screenreg` (and `matrixreg`, `wordreg`); the texreg-family writers were
+  only partially covered, so a `screenreg(..., file=)` export was never credited (#21).
+- venue `has_master_script`: now structural, delegating to `dependency_graph.entry_points` so it
+  agrees with the architecture report and recognizes a non-conventionally-named run-all (e.g.
+  `meta.R`). `entry_points` now requires resolved include edges, so a script whose only `source()`
+  targets a missing file can no longer manufacture a bogus master (#23).
+- venue layer: code-presuming checks (`has_master_script`, `env_declared`, `rederive_from_raw`,
+  `no_absolute_paths`, `seeded_rng`) now report `not_applicable` on a deposit with no executable
+  code, instead of `needs_author_action` items a qualitative author can never satisfy (#24). README,
+  data-citation, and license checks stay active.
+
+Tests: `core/tests/test_issue_batch_2026_07.py` (30 cases) pins each fix and its anti-bypass /
+no-false-negative boundary. Full suite: 197 passed.
+
+Thanks: @aeshaansinghal reported all nine issues; @molloyzak13 independently submitted an identical
+fix for the `screenreg` gap (#21, PR #25, superseded by this batch).
+
 ## plugin 0.4.7: fix invalid Claude plugin manifest (2026-06-23)
 
 - Removed unrecognized keys `$schema` and `displayName` from `claude-plugin/.claude-plugin/plugin.json`.

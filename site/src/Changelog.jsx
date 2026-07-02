@@ -9,7 +9,7 @@ const versionLabel = (v) => (/^\d/.test(v) ? `v${v}` : v);
 const releaseId = (v) =>
   "rel-" + v.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 
-const tagClass = { New: "new", Improved: "improved", Fixed: "fixed" };
+const tagClass = { New: "new", Improved: "improved", Fixed: "fixed", Thanks: "thanks" };
 
 function Release({ r }) {
   return (

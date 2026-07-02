@@ -1,5 +1,5 @@
 schema_version: 3
-rules_version: "2026.06.27"
+rules_version: "2026.07.02"
 fields: "id | category(structural|code-style|environment|normalization) | kind(defect|normalization) | priority(P0..P4 by downstream reproducibility cost) | rule | detection | languages | source_lessons | why_downstream | target_form | lossless_note | propose_only | output_changing"
 rewrite_fields_legend:
   why_downstream: "Plain explanation of how this finding hurts a downstream reproducibility run — fed to the host LLM as the 'why' of a fix."
@@ -576,3 +576,42 @@ rules:
     why_downstream: "Without `-> Table N` comments, nothing tells the downstream (our D1 export injection, and Line 2's matcher) which group of regressions produces which paper table. The table<->command alignment then has to be guessed — the single most fragile, most token-heavy step of a reproducibility check. It also blocks per-table artifact export (D1)."
     target_form: "Above each group of estimation commands that build one reported table, add a `* --> Table N` comment (and `* --> Figure N` for figures). The grouping should match how the paper presents the table (one comment per reported table)."
     lossless_note: "Adding comments is purely ADDITIVE — it changes no command, estimate, or data. BUT the actual table NUMBER is a fact from the paper that is NOT in the code: the host LLM must NOT invent it. The LLM may PROPOSE a grouping from code structure (consecutive regressions, shared dependent variable, a `preserve`/`eststo` block) and insert a PLACEHOLDER comment like `* --> Table ?? (reproai: grouped N regressions; author, confirm the table number)`. The author fills in the real number. Only when an artifact manifest or Line 2 extraction supplies the real table numbers may the placeholder be replaced with a confirmed `Table N`."
+
+  - id: A16-no-executable-code
+    category: structural
+    kind: defect
+    priority: P1
+    rule: "Author should ship the executable code (.do/.R/.py) that produces the reported results; a package with analysis data but no runnable script cannot be checked for computational reproducibility."
+    detection: "The package contains quantitative analysis material --- one or more data files, or a GUI-analysis project file (SmartPLS .splsm, SPSS .sav, JASP .jasp, jamovi .omv, Minitab .mpj/.mtb) --- but zero substantive executable code (no .do/.R/.py with any non-comment line). A document-only deposit with no data (e.g. an interview or document corpus) does NOT raise this, since no computation is expected."
+    languages: [stata, r, python]
+    source_lessons: ["missed detection #8: a SmartPLS (GUI) + .xlsx package passed with 0 blockers because every detector keys off scripts, so 'no runnable code' read as 'basically fine'"]
+    why_downstream: "With no runnable script, the downstream reproducibility check has nothing to execute --- it cannot regenerate a single table or figure, so a clean 'no blockers' result is misleading rather than reassuring. The analysis appears to live in a GUI tool or was done by hand."
+    target_form: "Add the script(s) that produce the reported results. For a GUI-only workflow, export the analysis to a runnable script where the tool supports it, and document in the README the exact steps to reproduce each table and figure from the project file."
+    lossless_note: "The engine must NOT fabricate analysis code --- this is author-supplied. Describe the gap only; there is nothing in the package to rewrite."
+    propose_only: true
+
+  - id: D8-results-not-shipped
+    category: structural
+    kind: normalization
+    priority: P3
+    rule: "Author should ship the reported result artifacts (the tables and figures the analysis produces) so a reviewer has something to compare a reproduction against, especially when the package has no runnable code to regenerate them."
+    detection: "The package ships data but no runnable code, AND no result artifacts are present --- no shipped file lives under an output/results/tables/figures folder. A document-only deposit with no data does NOT raise this (no computational results are expected)."
+    languages: [stata, r, python]
+    source_lessons: ["missed detection #10: a no-code package left output/tables and output/figures empty and shipped no results, and the code-triggered coverage check stayed silent"]
+    why_downstream: "If neither the code that builds a result nor the result file itself ships, a reproduction has nothing to diff against --- the reviewer cannot confirm any number or figure in the paper."
+    target_form: "Ship the result tables and figures the paper reports (e.g. under output/tables/ and output/figures/); if they currently live only in the manuscript, add them to the package so each reported artifact has a durable, comparable file."
+    lossless_note: "The engine cannot generate results (there is no code to run). Describe the missing result artifacts only; do not fabricate any output file."
+    propose_only: true
+
+  - id: D9-llm-data-provenance
+    category: structural
+    kind: normalization
+    priority: P2
+    rule: "Author should record the provenance of any LLM-generated data: the exact model id and snapshot/version, the generation parameters (temperature and top-p, and the seed where the API supports one), or the raw API responses --- so the generation step can be reproduced or at least audited."
+    detection: "The package ships an LLM artifact --- a file name or an .xlsx sheet name containing a strong LLM token (gpt, chatgpt, llm, claude, gemini, openai, anthropic, llama, mixtral, 'large language model') --- but no README (.md/.txt/.tex/.rst or .pdf) or code file records a VERSIONED model id together with a generation parameter (temperature/top-p/top-k/seed) or the raw responses. The bare word `prompt` is ignored (it is a common survey/experiment variable name); provenance presence is checked package-wide, not bound to each artifact."
+    languages: [stata, r, python]
+    source_lessons: ["missed detection #9: a package shipped four GPT-4o-generated datasets plus 'GPT Prompts.xlsx' and recorded no model version, temperature, or seed"]
+    why_downstream: "An LLM generation step is stochastic and versioned: without the model snapshot and the parameters (or the raw responses), a re-run draws different data than the paper used, and the central input to the analysis cannot be reproduced or audited."
+    target_form: "Add a short provenance note (in the README or a manifest) recording, for each LLM-generated dataset: the exact model id and snapshot date/version, temperature and top-p, the seed if the API supports one, and the prompt template. Where the API is non-deterministic, ship the raw API responses alongside the derived data."
+    lossless_note: "Provenance is author knowledge the engine cannot recover from the data --- it must NOT invent a model id, date, or parameter value. Describe what is missing; the author supplies the real values."
+    propose_only: true

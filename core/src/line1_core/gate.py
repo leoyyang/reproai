@@ -20,6 +20,8 @@ from .rule_engine import (
     _TABLE_HEADER, _FIGURE_HEADER, _section_spans, _is_estimation, _GRAPH_CMD,
     _TABLE_EXPORT, _GRAPH_EXPORT, _mask_r_strings_comments,
     _toplevel_estimation_lines, _toplevel_graph_line,
+    _toplevel_estimations_needing_table,
+    _call_unit_from, _strip_label_opts,
 )
 
 # A VALID export must write under a designated `tables/`/`figures/` subfolder. Requiring that SEGMENT
@@ -51,15 +53,23 @@ class Artifact:
 
 def _section_export_targets(body: list[str], out_re: re.Pattern[str], cmd_re: re.Pattern[str]) -> list[str]:
     targets: list[str] = []
-    for ln in body:
-        masked = _mask_r_strings_comments(ln)
+    i, n = 0, len(body)
+    while i < n:
+        masked = _mask_r_strings_comments(body[i])
         if not cmd_re.search(masked):
+            i += 1
             continue
+        # Issue #20: join the export command's whole (possibly multi-line) call before extracting
+        # targets, so `texreg(..., file = "output/tables/x.txt")` with `file=` on a continuation line
+        # is credited. Label-only options are stripped so a decoy path in a caption/note is not
+        # recorded as an output target (which verify_runtime would then chase).
         # Follow-up D: broadened in lockstep with _OUT_TABLE/_OUT_FIGURE — an optional leading path
         # prefix before the required `tables/`/`figures/` segment, so `results/tables/x.csv` and bare
         # `tables/x.csv` count, while a bare filename (`mytable.csv`, no segment) still does not.
-        for m in re.finditer(r'["\']((?:[\w.\-]+[\\/])*(?:tables|figures)[\\/][^"\']+)["\']', ln, re.IGNORECASE):
+        unit, end = _call_unit_from(body, i)
+        for m in re.finditer(r'["\']((?:[\w.\-]+[\\/])*(?:tables|figures)[\\/][^"\']+)["\']', _strip_label_opts(unit), re.IGNORECASE):
             targets.append(m.group(1).replace("\\", "/"))
+        i = max(end, i + 1)
     return targets
 
 
@@ -82,8 +92,10 @@ def expected_artifacts(root: Path) -> list[Artifact]:
                 tgts = _section_export_targets(body, _OUT_TABLE, _TABLE_EXPORT)
                 out.append(Artifact(label, "table", e.path, start + 1, bool(tgts), tgts))
         else:
-            # no `* Table N` headers: an unlabeled script that builds a table is still one artifact
-            tl = _toplevel_estimation_lines(text)
+            # no `* Table N` headers: an unlabeled script that builds a table is still one artifact,
+            # UNLESS its estimations are already captured as a saved figure (issue #22) — then no
+            # phantom table is demanded. Shares the D1 rule so the gate and D1 agree.
+            tl = _toplevel_estimations_needing_table(text)
             if tl:
                 tgts = _section_export_targets(lines, _OUT_TABLE, _TABLE_EXPORT)
                 out.append(Artifact("Table (unlabeled)", "table", e.path, tl[0], bool(tgts), tgts))

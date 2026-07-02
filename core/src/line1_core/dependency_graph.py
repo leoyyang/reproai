@@ -252,7 +252,12 @@ def build(root: Path, entries: list[FileEntry]) -> list[Edge]:
 
 def entry_points(entries: list[FileEntry], edges: list[Edge]) -> list[dict[str, Any]]:
     code = {e.path for e in entries if e.language in {"stata", "r", "python"}}
-    callers = {e.src for e in edges if e.kind in _INCLUDE_KINDS}
+    # `callers` requires e.resolved: a script whose only includes are dangling (e.g. source('missing.R'))
+    # is NOT a real orchestrator, so it must not be manufactured into an entry point / master (issue #23).
+    # This deliberately differs from orphan_detector's caller set, which counts ALL include sources
+    # (resolved or not) because for dead-script detection a script that *attempts* to run something is
+    # not "unreferenced" — its brokenness is reported separately as referenced_missing.
+    callers = {e.src for e in edges if e.kind in _INCLUDE_KINDS and e.resolved}
     called = {e.dst for e in edges if e.kind in _INCLUDE_KINDS and e.resolved}
     points: list[dict[str, Any]] = []
     for path in sorted(callers - called):
